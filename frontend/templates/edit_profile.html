@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile — Vivah{% endblock %}
+
+{% block content %}
+<div class="invite-card" style="max-width:800px; margin:40px auto;">
+  <section class="form-panel" style="padding:30px;">
+    <h2 style="font-family:var(--font-d); font-size:2rem; margin-bottom:20px;">Edit Your Profile</h2>
+
+    {% if messages %}
+      <ul class="form-messages">
+        {% for message in messages %}
+          <li class="form-message form-message--{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <form method="post" class="vivah-form">
+      {% csrf_token %}
+      <div class="field-row">
+        <div class="field">
+          <label for="full_name">Full Name</label>
+          <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}">
+        </div>
+        <div class="field">
+          <label for="dob">Date of Birth</label>
+          <input type="date" id="dob" name="dob" value="{{ user.dob|default:'' }}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="profession">Profession</label>
+          <input type="text" id="profession" name="profession" value="{{ user.profession|default:'' }}">
+        </div>
+        <div class="field">
+          <label for="city">City</label>
+          <input type="text" id="city" name="city" value="{{ user.city|default:'' }}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="education">Education</label>
+          <input type="text" id="education" name="education" value="{{ user.education|default:'' }}">
+        </div>
+        <div class="field">
+          <label for="height">Height (e.g. 5'10")</label>
+          <input type="text" id="height" name="height" value="{{ user.height|default:'' }}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="religion">Religion</label>
+          <input type="text" id="religion" name="religion" value="{{ user.religion|default:'' }}">
+        </div>
+        <div class="field">
+          <label for="mother_tongue">Mother Tongue</label>
+          <input type="text" id="mother_tongue" name="mother_tongue" value="{{ user.mother_tongue|default:'' }}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="bio">About Me</label>
+        <textarea id="bio" name="bio" rows="4" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px;">{{ user.bio|default:'' }}</textarea>
+      </div>
+
+      <button type="submit" class="seal-button" style="width:100%;">
+        <span class="seal-button__seal">वि</span>
+        <span class="seal-button__label">Update Profile</span>
+      </button>
+    </form>
+    <p style="margin-top:20px; text-align:center;"><a href="{% url 'dashboard' %}">← Back to Dashboard</a></p>
+  </section>
+</div>
+{% endblock %}

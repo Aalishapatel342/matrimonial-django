@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Settings — Vivah{% endblock %}
+
+{% block content %}
+<div class="invite-card" style="max-width:800px; margin:40px auto;">
+  <section class="form-panel" style="padding:30px;">
+    <h2 style="font-family:var(--font-d); font-size:2rem; margin-bottom:20px;">Settings</h2>
+    <p>This page is under construction. You can edit your profile <a href="{% url 'edit_profile' %}">here</a>.</p>
+    <p><a href="{% url 'dashboard' %}">← Back to Dashboard</a></p>
+  </section>
+</div>
+{% endblock %}

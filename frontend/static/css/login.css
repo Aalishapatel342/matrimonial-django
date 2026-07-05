@@ -1,0 +1,248 @@
+.invite-frame, .invite-card, .form-panel {
+  --page-bg: var(--cream);
+  --ivory: var(--surface);
+  --ivory-deep: var(--surface-alt);
+  --teal: #1F6E62;
+  --teal-light: #E8F3F1;
+  --marigold: #E2782B;
+  --error: #A3243C;
+  --error-bg: #FBEAEA;
+  --gold-pale: #F5E9C8;
+  --radius-sm: 8px;
+  --transition: 0.22s cubic-bezier(.4,0,.2,1);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--cream);
+}
+
+/* Frame */
+.invite-frame{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:30px 16px;
+}
+
+.invite-card{
+  width:min(980px, 100%);
+  display:grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap:18px;
+}
+
+/* If only form exists (mobile), make it single column */
+@media(max-width:860px){
+  .invite-card{ grid-template-columns:1fr; }
+}
+
+/* Form panel */
+.form-panel{
+  background:linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
+  border:1.4px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:0 18px 50px rgba(69,20,42,0.10);
+  padding:22px;
+}
+
+.form-panel .seal-switch{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.seal-switch__option{
+  flex:1;
+  text-align:center;
+  padding:10px 12px;
+  border-radius:999px;
+  font-family:var(--font-d);
+  font-weight:700;
+  color:rgba(69,20,42,0.62);
+  border:1.5px solid transparent;
+  transition:all var(--transition);
+}
+
+.seal-switch__option:hover{
+  background:rgba(201,151,46,0.10);
+  color:var(--maroon);
+}
+
+.seal-switch__option.is-active{
+  background:linear-gradient(135deg,var(--maroon),var(--maroon-dark));
+  color:#fff;
+  border-color:rgba(201,151,46,0.35);
+}
+
+/* form messages */
+.form-messages{
+  list-style:none;
+  margin-bottom:14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.form-message{
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:0.92rem;
+  font-weight:600;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.7);
+}
+
+.form-message--error,
+.form-message--danger{
+  background:var(--error-bg);
+  color:var(--error);
+  border-color:rgba(163,36,60,0.25);
+}
+
+.form-message--success{
+  background:rgba(31,110,98,0.10);
+  color:var(--teal);
+  border-color:rgba(31,110,98,0.22);
+}
+
+.vivah-form{ display:flex; flex-direction:column; gap:14px; }
+
+.field{ display:flex; flex-direction:column; gap:6px; }
+.field label,
+.field-row label{
+  font-size:0.78rem;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--text-2);
+}
+
+.field-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+@media(max-width:520px){ .field-row{ grid-template-columns:1fr; } }
+
+.field input,
+.vivah-form input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1.5px solid var(--border);
+  outline:none;
+  background:rgba(255,255,255,0.75);
+  color:var(--text);
+  transition:border-color var(--transition), box-shadow var(--transition);
+  font-size:0.95rem;
+}
+
+.field input:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,151,46,0.18); }
+
+/* Password field */
+.password-field{ position:relative; }
+.password-field input{ padding-right:48px; }
+.password-toggle{
+  position:absolute;
+  top:50%; right:8px;
+  transform:translateY(-50%);
+  width:36px; height:36px;
+  border-radius:50%;
+  display:grid; place-items:center;
+  background:rgba(255,255,255,0.5);
+  border:1px solid rgba(201,151,46,0.25);
+  transition:background var(--transition);
+}
+.password-toggle:hover{ background:rgba(201,151,46,0.12); }
+
+/* Radio pills (register page) */
+.pill-group{ display:flex; gap:10px; flex-wrap:wrap; }
+.pill{
+  flex:1;
+  min-width:140px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:999px;
+  border:1.5px solid var(--border);
+  background:rgba(255,255,255,0.7);
+  cursor:pointer;
+  transition:border-color var(--transition), background var(--transition);
+}
+.pill input{ display:none; }
+.pill span{ font-weight:800; color:var(--text-2); }
+
+/* Primary rule for browsers that support :has() */
+.pill:has(input:checked){ border-color:var(--gold); background:rgba(201,151,46,0.12); }
+
+/* Fallback for browsers without :has() support: uses the sibling
+   combinator so the checked radio still visually styles its label
+   and text even if the whole-pill background doesn't apply. */
+.pill input:checked{ outline: none; }
+.pill input:checked + span{
+  color:var(--maroon);
+}
+.pill input:checked ~ span{
+  color:var(--maroon);
+}
+
+/* buttons */
+.seal-button{
+  margin-top:4px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding:12px 18px;
+  border-radius:999px;
+  background:linear-gradient(135deg,var(--maroon),var(--maroon-dark));
+  color:#fff;
+  font-family:var(--font-d);
+  font-weight:800;
+  border:1px solid rgba(201,151,46,0.35);
+  box-shadow:0 10px 28px rgba(69,20,42,0.18);
+  transition:transform 0.12s ease, box-shadow var(--transition);
+}
+
+.seal-button:hover{ box-shadow:0 14px 34px rgba(69,20,42,0.22); }
+.seal-button:active{ transform:scale(0.98); }
+
+.seal-button__seal{
+  width:34px; height:34px;
+  display:grid; place-items:center;
+  border-radius:50%;
+  background:rgba(255,255,255,0.15);
+  border:1px solid rgba(255,255,255,0.25);
+  font-family:var(--font-d);
+}
+
+.seal-button__label{ font-size:1rem; }
+
+/* footnote */
+.form-footnote{
+  font-size:0.9rem;
+  color:var(--text-2);
+  margin-top:6px;
+}
+.form-footnote a{ color:var(--maroon); font-weight:800; }
+
+/* checkbox */
+.checkbox-field{
+  display:flex; align-items:flex-start; gap:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1.5px solid var(--border);
+  background:rgba(255,255,255,0.6);
+}
+.checkbox-field input{ margin-top:3px; }
+.checkbox-field span{ font-size:0.9rem; color:var(--text-2); line-height:1.4; }
+.checkbox-field a{ color:var(--maroon); font-weight:800; }
+
+/* Toast placeholder (if any) */
+.vivah-form .field-hint{ min-height:18px; }

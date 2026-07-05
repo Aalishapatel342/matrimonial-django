@@ -1,0 +1,288 @@
+/* =====================================================================
+   VIVAH — Authentication Pages (shared)
+   Two‑column layout, brand panel, form styling.
+===================================================================== */
+
+.auth-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: var(--cream);
+}
+
+/* ---- Brand panel (left) ---- */
+.auth-brand {
+  background: linear-gradient(135deg, var(--maroon) 0%, var(--maroon-dark) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 30px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+.brand-content {
+  max-width: 400px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.brand-seal {
+  font-family: 'Noto Serif Devanagari', serif;
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: 10px;
+  color: var(--gold-light);
+}
+.brand-name {
+  font-family: var(--font-d);
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 0 0 12px 0;
+}
+.brand-tagline {
+  font-family: var(--font-d);
+  font-size: 1.3rem;
+  font-weight: 500;
+  font-style: italic;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.4;
+  margin-bottom: 20px;
+}
+.brand-diya {
+  display: inline-block;
+  position: relative;
+  width: 40px;
+  height: 50px;
+  margin: 0 auto 18px;
+}
+.brand-diya .flame {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 24px;
+  background: radial-gradient(ellipse at 50% 100%, #f9d423, #f7971e);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: flicker 1.5s infinite alternate;
+}
+.brand-diya .base {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 20px;
+  background: radial-gradient(ellipse at 50% 0%, #d4a373, #b5835a);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+@keyframes flicker {
+  0% { transform: translateX(-50%) scale(1); opacity: 0.9; }
+  100% { transform: translateX(-50%) scale(1.1, 1.05); opacity: 1; }
+}
+.brand-note {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: rgba(255,255,255,0.75);
+  margin-top: 10px;
+}
+
+/* ---- Form panel (right) ---- */
+.auth-form-panel {
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 36px;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.auth-switch {
+  display: flex;
+  gap: 0;
+  background: var(--surface-alt);
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 28px;
+}
+.auth-switch a {
+  flex: 1;
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: 0.15s ease;
+}
+.auth-switch a.active {
+  background: var(--maroon);
+  color: #fff;
+}
+.auth-switch a:not(.active):hover {
+  background: rgba(107, 30, 60, 0.08);
+}
+
+/* ---- Form fields (shared) ---- */
+.vivah-form .field {
+  margin-bottom: 16px;
+}
+.vivah-form label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  margin-bottom: 5px;
+}
+.vivah-form input[type="text"],
+.vivah-form input[type="email"],
+.vivah-form input[type="password"],
+.vivah-form input[type="tel"],
+.vivah-form input[type="date"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: 0.15s ease;
+}
+.vivah-form input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 154, 61, 0.15);
+}
+.vivah-form .field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.password-field {
+  position: relative;
+}
+.password-field input {
+  padding-right: 44px;
+}
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-2);
+  padding: 4px;
+  cursor: pointer;
+}
+.password-toggle:hover {
+  color: var(--text);
+}
+.eye-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: contain;
+}
+
+.pill-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pill {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 12px;
+  text-align: center;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-2);
+  transition: 0.1s ease;
+}
+.pill:has(input:checked) {
+  border-color: var(--maroon);
+  background: var(--maroon-tint);
+  color: var(--maroon-dark);
+}
+.pill input {
+  display: none;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 18px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.checkbox-field input {
+  margin-top: 3px;
+  accent-color: var(--maroon);
+}
+.checkbox-field a {
+  color: var(--maroon);
+  text-decoration: underline;
+}
+
+.form-footnote {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+.form-footnote a {
+  color: var(--maroon);
+  font-weight: 700;
+  text-decoration: none;
+}
+.form-footnote a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 760px) {
+  .auth-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .auth-brand {
+    padding: 30px 20px;
+    min-height: 260px;
+  }
+  .auth-form-panel {
+    padding: 30px 20px;
+    max-width: 100%;
+  }
+  .brand-name {
+    font-size: 2.2rem;
+  }
+  .brand-tagline {
+    font-size: 1.1rem;
+  }
+}
+@media (max-width: 600px) {
+  .vivah-form .field-row {
+    grid-template-columns: 1fr;
+  }
+}

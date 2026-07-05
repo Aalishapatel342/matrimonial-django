@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Vivah — Begin a Marriage Search With Care{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Mukta:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@500;600&display=swap" rel="stylesheet">
+  <!-- Base styles (variables, resets, toasts, etc.) -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <!-- Page‑specific styles (auth.css, dashboard.css, etc.) -->
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <!-- ─── LAYOUT BLOCK (overridable) ─── -->
+  {% block layout %}
+    <!-- Default: auth pages with corner ornaments and invite-frame -->
+    <svg class="ornament-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="corner-flourish" viewBox="0 0 120 120">
+          <path d="M4 4 C 4 40, 10 70, 40 86 C 60 97, 70 70, 56 58 C 46 50, 38 60, 46 68"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="46" cy="68" r="3.2" fill="currentColor"/>
+          <path d="M4 4 C 40 4, 70 10, 86 40 C 97 60, 70 70, 58 56 C 50 46, 60 38, 68 46"
+                fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="68" cy="46" r="3.2" fill="currentColor"/>
+          <path d="M4 4 L 4 4" stroke="currentColor"/>
+          <circle cx="18" cy="18" r="2" fill="currentColor" opacity=".7"/>
+        </symbol>
+        <symbol id="seal-monogram" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="1" opacity=".6"/>
+          <text x="50" y="62" text-anchor="middle" font-family="'Noto Serif Devanagari', serif"
+                font-size="36" fill="currentColor">वि</text>
+        </symbol>
+      </defs>
+    </svg>
+
+    <main class="invite-frame">
+      <!-- content goes here -->
+      {% block content %}{% endblock %}
+    </main>
+  {% endblock %}
+
+  <!-- Base JavaScript (auth.js includes password toggles etc.) -->
+  <script src="{% static 'js/auth.js' %}"></script>
+  <!-- Extra page‑specific JS -->
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

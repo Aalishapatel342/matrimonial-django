@@ -1,0 +1,110 @@
+/* =====================================================================
+   VIVAH — Base Styles
+   Shared variables, resets, typography, toasts, buttons, etc.
+===================================================================== */
+
+:root {
+  --maroon:        #6B1E3C;
+  --maroon-dark:   #45142A;
+  --maroon-tint:   #F7E9EE;
+  --gold:          #C9972E;
+  --gold-light:    #E8C170;
+  --gold-pale:     rgba(201, 151, 46, 0.12);
+  --cream:         #FDF6EC;
+  --surface:       #FFFFFF;
+  --surface-alt:   #F8F3F5;
+  --border:        #EAD9C8;
+  --border-light:  #EFE7D4;
+  --text:          #2B1620;
+  --text-2:        #7A6670;
+  --text-3:        #9C8A7E;
+  --shadow:        0 10px 30px rgba(69,20,42,0.10);
+  --shadow-lg:     0 20px 60px rgba(69,20,42,0.18);
+  --radius:        16px;
+  --radius-lg:     24px;
+  --font-d:        'Cormorant Garamond', Georgia, serif;
+  --font-b:        'Mukta', 'Poppins', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-b);
+  background: var(--cream);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: var(--font-b); cursor: pointer; border: none; background: none; }
+input, select, textarea { font-family: var(--font-b); }
+img { display: block; max-width: 100%; }
+
+/* ---- Toast ---- */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  padding: 12px 18px;
+  background: var(--text);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-lg);
+  border-left: 4px solid var(--gold);
+  animation: slideIn 0.25s ease;
+}
+.toast.success { border-left-color: #3F7A5D; }
+.toast.error   { border-left-color: #B3261E; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 1rem;
+  background: linear-gradient(135deg, var(--maroon), var(--maroon-dark));
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: 0.15s ease;
+  box-shadow: 0 6px 16px -6px rgba(107, 16, 41, 0.4);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -8px rgba(107, 16, 41, 0.5);
+}
+.btn-seal {
+  font-family: 'Noto Serif Devanagari', serif;
+  font-size: 1.2rem;
+}
+
+/* ---- Form messages ---- */
+.form-messages { list-style: none; padding: 0; margin: 0 0 16px; }
+.form-message {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.form-message--error { background: #FBEAE9; color: #B3261E; }
+.form-message--success { background: #E7F3EC; color: #3F7A5D; }
+
+/* ---- Responsive helpers ---- */
+@media (max-width: 600px) {
+  .hide-mobile { display: none !important; }
+}

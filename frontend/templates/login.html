@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign In — Vivah{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+  <link rel="stylesheet" href="{% static 'css/login.css' %}">
+{% endblock %}
+{% block content %}
+<div class="login-wrapper">
+  <!-- Left: Invitation / Brand Panel -->
+  <aside class="login-invite">
+    <div class="invite-content">
+      <div class="brand-seal">वि</div>
+      <h1 class="brand-name">VIVAH</h1>
+      <p class="brand-tagline">Where two families<br>become one story.</p>
+      <div class="brand-diya" aria-hidden="true">
+        <span class="flame"></span>
+        <span class="base"></span>
+      </div>
+      <p class="brand-note">
+        A considered space for individuals and families to begin a marriage
+        search with care — not a swipe, a search built around intention.
+      </p>
+    </div>
+  </aside>
+
+  <!-- Right: Form Panel -->
+  <section class="login-form-panel">
+    <nav class="auth-switch">
+      <a href="{% url 'login' %}" class="active">Sign In</a>
+      <a href="{% url 'register' %}">Create Profile</a>
+    </nav>
+
+    {% if messages %}
+      <ul class="form-messages">
+        {% for message in messages %}
+          <li class="form-message form-message--{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <form method="post" class="vivah-form" novalidate>
+      {% csrf_token %}
+      <div class="field">
+        <label for="identifier">Email or mobile number</label>
+        <input type="text" id="identifier" name="identifier" required
+               autocomplete="username" placeholder="you@example.com"
+               value="{{ form_data.identifier|default:'' }}">
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="password-field">
+          <input type="password" id="password" name="password" required
+                 autocomplete="current-password" placeholder="••••••••">
+          <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
+            <span class="eye-icon"></span>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary">
+        <span class="btn-seal">वि</span>
+        Sign In
+      </button>
+    </form>
+
+    <p class="form-footnote">New to Vivah? <a href="{% url 'register' %}">Create your profile</a></p>
+  </section>
+</div>
+{% endblock %}

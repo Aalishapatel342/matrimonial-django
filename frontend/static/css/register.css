@@ -1,0 +1,11 @@
+/* =====================================================================
+   Register page – additional tweaks (e.g. password hint)
+===================================================================== */
+.field-hint {
+  font-size: 0.8rem;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.field-hint.is-error {
+  color: #B3261E;
+}
