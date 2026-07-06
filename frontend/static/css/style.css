@@ -1,6 +1,6 @@
 /* =====================================================================
    VIVAH — Base Styles
-   Shared variables, resets, typography, toasts, buttons, etc.
+   Variables, resets, typography, toasts, buttons, form fields.
 ===================================================================== */
 
 :root {
@@ -26,7 +26,7 @@
   --font-b:        'Mukta', 'Poppins', sans-serif;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin:0; padding:0; }
 html { scroll-behavior: smooth; }
 body {
   font-family: var(--font-b);
@@ -35,13 +35,12 @@ body {
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
-
 a { color: inherit; text-decoration: none; }
 button { font-family: var(--font-b); cursor: pointer; border: none; background: none; }
 input, select, textarea { font-family: var(--font-b); }
 img { display: block; max-width: 100%; }
 
-/* ---- Toast ---- */
+/* ---------- Toasts ---------- */
 .toast-container {
   position: fixed;
   top: 20px;
@@ -68,43 +67,206 @@ img { display: block; max-width: 100%; }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* ---- Buttons ---- */
+/* ---------- Buttons ---------- */
 .btn-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 12px 28px;
-  border-radius: 999px;
-  font-weight: 700;
-  font-size: 1rem;
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 12px;
   background: linear-gradient(135deg, var(--maroon), var(--maroon-dark));
   color: #fff;
-  border: none;
-  cursor: pointer;
-  transition: 0.15s ease;
-  box-shadow: 0 6px 16px -6px rgba(107, 16, 41, 0.4);
+  font-weight: 600;
+  font-size: 15.5px;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 20px rgba(107,30,60,0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px -8px rgba(107, 16, 41, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(107,30,60,0.34);
 }
-.btn-seal {
-  font-family: 'Noto Serif Devanagari', serif;
-  font-size: 1.2rem;
+.btn-primary:active { transform: translateY(0); }
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--maroon);
+  font-weight: 600;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-/* ---- Form messages ---- */
-.form-messages { list-style: none; padding: 0; margin: 0 0 16px; }
-.form-message {
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 0.9rem;
+/* ---------- Form fields (shared) ---------- */
+.field { margin-bottom: 18px; position: relative; }
+.field label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 7px;
+}
+.field input[type="text"],
+.field input[type="email"],
+.field input[type="password"],
+.field input[type="tel"],
+.field input[type="date"] {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.field input:focus {
+  border-color: var(--maroon);
+  box-shadow: 0 0 0 4px rgba(107,30,60,0.10);
+}
+.field.has-error input {
+  border-color: #B3261E;
+  background: #FBEAE9;
+}
+.field.has-success input {
+  border-color: #3F7A5D;
+}
+.field-error {
+  display: none;
+  color: #B3261E;
+  font-size: 12.5px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+.field.has-error .field-error { display: block; }
+
+/* Password wrapper */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 42px !important; }
+.pw-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--text-2);
+  display: flex;
+}
+.pw-toggle:hover { color: var(--maroon); }
+
+/* Password meter */
+.pw-meter { display: flex; gap: 4px; margin-top: 8px; }
+.pw-meter i {
+  height: 4px;
+  flex: 1;
+  border-radius: 3px;
+  background: var(--border);
+}
+.pw-meter-label {
+  font-size: 11.5px;
+  margin-top: 5px;
+  color: var(--text-2);
   font-weight: 600;
 }
-.form-message--error { background: #FBEAE9; color: #B3261E; }
-.form-message--success { background: #E7F3EC; color: #3F7A5D; }
 
-/* ---- Responsive helpers ---- */
-@media (max-width: 600px) {
-  .hide-mobile { display: none !important; }
+/* General error box */
+.general-error {
+  display: none;
+  background: #FBEAE9;
+  color: #B3261E;
+  border: 1px solid #f0c9c6;
+  padding: 11px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+.general-error.show { display: block; }
+
+/* Demo chips */
+.demo-row {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 20px 0;
+}
+.demo-chip {
+  flex: 1;
+  border: 1.5px dashed var(--gold);
+  background: #FFFBF2;
+  color: var(--maroon-dark);
+  border-radius: 10px;
+  padding: 9px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+.demo-chip:hover { background: var(--gold-light); }
+
+/* Switch line (login/register toggle) */
+.switch-line {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 13.5px;
+  color: var(--text-2);
+}
+
+/* Gender group */
+.gender-group {
+  display: flex;
+  gap: 12px;
+}
+.gender-option {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.gender-option input { display: none; }
+.gender-option.selected {
+  border-color: var(--maroon);
+  background: var(--maroon-tint);
+  color: var(--maroon-dark);
+  font-weight: 600;
+}
+.gender-group-wrap.has-error .gender-option {
+  border-color: #B3261E;
+}
+
+/* Mobile logo (visible on small screens) */
+.mobile-logo {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.mobile-logo span {
+  font-family: var(--font-d);
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--maroon);
+}
+
+/* Responsive tweaks */
+@media (max-width: 860px) {
+  .mobile-logo { display: flex; }
+  .auth-panel { padding: 36px 26px; }
 }

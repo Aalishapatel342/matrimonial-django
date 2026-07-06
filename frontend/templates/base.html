@@ -8,16 +8,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Mukta:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@500;600&display=swap" rel="stylesheet">
-  <!-- Base styles (variables, resets, toasts, etc.) -->
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  <!-- Page‑specific styles (auth.css, dashboard.css, etc.) -->
   {% block extra_css %}{% endblock %}
 </head>
 <body>
 
   <!-- ─── LAYOUT BLOCK (overridable) ─── -->
   {% block layout %}
-    <!-- Default: auth pages with corner ornaments and invite-frame -->
+    <!-- Default: auth pages with corner ornaments -->
     <svg class="ornament-defs" aria-hidden="true" focusable="false">
       <defs>
         <symbol id="corner-flourish" viewBox="0 0 120 120">
@@ -40,14 +38,15 @@
     </svg>
 
     <main class="invite-frame">
-      <!-- content goes here -->
+      <svg class="corner corner--tl"><use href="#corner-flourish"/></svg>
+      <svg class="corner corner--tr"><use href="#corner-flourish"/></svg>
+      <svg class="corner corner--bl"><use href="#corner-flourish"/></svg>
+      <svg class="corner corner--br"><use href="#corner-flourish"/></svg>
       {% block content %}{% endblock %}
     </main>
   {% endblock %}
 
-  <!-- Base JavaScript (auth.js includes password toggles etc.) -->
   <script src="{% static 'js/auth.js' %}"></script>
-  <!-- Extra page‑specific JS -->
   {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,74 +1,130 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Edit Profile — Vivah{% endblock %}
 
-{% block content %}
-<div class="invite-card" style="max-width:800px; margin:40px auto;">
-  <section class="form-panel" style="padding:30px;">
-    <h2 style="font-family:var(--font-d); font-size:2rem; margin-bottom:20px;">Edit Your Profile</h2>
+{% block extra_css %}
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+  <link rel="stylesheet" href="{% static 'css/edit_profile.css' %}">
+{% endblock %}
 
-    {% if messages %}
-      <ul class="form-messages">
-        {% for message in messages %}
-          <li class="form-message form-message--{{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
+{% block layout %}
+<div class="auth-view">
+  <div class="auth-shell">
+    <!-- LEFT: Profile summary (simpler hero panel) -->
+    <aside class="auth-hero" style="justify-content: center; align-items: center; text-align: center; padding: 40px;">
+      <div class="profile-summary">
+        <div class="avatar-xl" style="width: 100px; height: 100px; border-radius: 50%; background: {{ user.full_name|avatar_style }}; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #fff; font-weight: 700; margin: 0 auto 16px;">
+          {{ user.full_name|initials }}
+        </div>
+        <h2 style="font-family: var(--font-d); font-size: 1.8rem; color: #fff; margin-bottom: 4px;">{{ user.full_name }}</h2>
+        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">{{ user.email }}</p>
+        <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+          <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">
+            {% if user.gender == 'male' %}Groom{% elif user.gender == 'female' %}Bride{% else %}Member{% endif %}
+          </span>
+          <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">
+            {{ user.age|default:"Age not set" }}
+          </span>
+        </div>
+        <div style="margin-top: 30px; font-size: 0.85rem; color: rgba(255,255,255,0.6);">
+          <p>Complete your profile to get better matches.</p>
+          <div class="completion-bar" style="max-width: 200px; margin: 8px auto 0;">
+            <div class="completion-bar__track" style="background: rgba(255,255,255,0.2);">
+              <div class="completion-bar__fill" style="width: 78%; background: var(--gold);"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
 
-    <form method="post" class="vivah-form">
-      {% csrf_token %}
-      <div class="field-row">
-        <div class="field">
-          <label for="full_name">Full Name</label>
-          <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}">
-        </div>
-        <div class="field">
-          <label for="dob">Date of Birth</label>
-          <input type="date" id="dob" name="dob" value="{{ user.dob|default:'' }}">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="profession">Profession</label>
-          <input type="text" id="profession" name="profession" value="{{ user.profession|default:'' }}">
-        </div>
-        <div class="field">
-          <label for="city">City</label>
-          <input type="text" id="city" name="city" value="{{ user.city|default:'' }}">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="education">Education</label>
-          <input type="text" id="education" name="education" value="{{ user.education|default:'' }}">
-        </div>
-        <div class="field">
-          <label for="height">Height (e.g. 5'10")</label>
-          <input type="text" id="height" name="height" value="{{ user.height|default:'' }}">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="religion">Religion</label>
-          <input type="text" id="religion" name="religion" value="{{ user.religion|default:'' }}">
-        </div>
-        <div class="field">
-          <label for="mother_tongue">Mother Tongue</label>
-          <input type="text" id="mother_tongue" name="mother_tongue" value="{{ user.mother_tongue|default:'' }}">
-        </div>
-      </div>
-      <div class="field">
-        <label for="bio">About Me</label>
-        <textarea id="bio" name="bio" rows="4" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:10px;">{{ user.bio|default:'' }}</textarea>
-      </div>
+    <!-- RIGHT: Edit form -->
+    <div class="auth-panel" style="padding: 30px 36px; align-items: flex-start;">
+      <div class="auth-panel-inner" style="max-width: 480px;">
+        <h2 style="font-family: var(--font-d); font-size: 2rem; margin: 0 0 4px; color: var(--maroon-dark);">Edit Profile</h2>
+        <p style="color: var(--text-2); margin-bottom: 24px; font-size: 0.9rem;">Update your details to find the perfect match.</p>
 
-      <button type="submit" class="seal-button" style="width:100%;">
-        <span class="seal-button__seal">वि</span>
-        <span class="seal-button__label">Update Profile</span>
-      </button>
-    </form>
-    <p style="margin-top:20px; text-align:center;"><a href="{% url 'dashboard' %}">← Back to Dashboard</a></p>
-  </section>
+        {% if messages %}
+          <div class="general-error show" style="margin-bottom: 16px;">
+            {% for message in messages %}
+              {{ message }}
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" class="vivah-form" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="field-row">
+            <div class="field">
+              <label for="full_name">Full Name</label>
+              <input type="text" id="full_name" name="full_name" value="{{ user.full_name|default:'' }}">
+            </div>
+            <div class="field">
+              <label for="dob">Date of Birth</label>
+              <input type="date" id="dob" name="dob" value="{{ user.dob|default:'' }}">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="profession">Profession</label>
+              <input type="text" id="profession" name="profession" value="{{ user.profession|default:'' }}">
+            </div>
+            <div class="field">
+              <label for="city">City</label>
+              <input type="text" id="city" name="city" value="{{ user.city|default:'' }}">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="education">Education</label>
+              <input type="text" id="education" name="education" value="{{ user.education|default:'' }}">
+            </div>
+            <div class="field">
+              <label for="height">Height (e.g. 5'10")</label>
+              <input type="text" id="height" name="height" value="{{ user.height|default:'' }}">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="religion">Religion</label>
+              <input type="text" id="religion" name="religion" value="{{ user.religion|default:'' }}">
+            </div>
+            <div class="field">
+              <label for="mother_tongue">Mother Tongue</label>
+              <input type="text" id="mother_tongue" name="mother_tongue" value="{{ user.mother_tongue|default:'' }}">
+            </div>
+          </div>
+
+          <div class="field" style="margin-bottom: 14px;">
+            <label for="profile_pic">Profile Picture</label>
+            <input type="file" id="profile_pic" name="profile_pic" accept="image/*" style="width:100%;">
+            <div style="margin-top:8px; color: var(--text-2); font-size: 0.85rem;">
+              <span>Upload a clear photo (stored in MongoDB).</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="bio">About Me</label>
+            <textarea id="bio" name="bio" rows="4" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:var(--font-b);">{{ user.bio|default:'' }}</textarea>
+          </div>
+
+
+          <button type="submit" class="btn-primary" style="margin-top: 8px;">
+            <span class="btn-seal">वि</span>
+            Update Profile
+          </button>
+        </form>
+
+        <p style="margin-top: 20px; text-align: center; font-size: 0.9rem;">
+          <a href="{% url 'dashboard' %}" style="color: var(--maroon); font-weight: 600;">← Back to Dashboard</a>
+        </p>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

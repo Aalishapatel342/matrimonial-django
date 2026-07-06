@@ -1,72 +1,133 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Sign In — Vivah{% endblock %}
+{% block title %}Create Account — Vivaaah.com{% endblock %}
+
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/auth.css' %}">
   <link rel="stylesheet" href="{% static 'css/login.css' %}">
 {% endblock %}
-{% block content %}
-<div class="login-wrapper">
-  <!-- Left: Invitation / Brand Panel -->
-  <aside class="login-invite">
-    <div class="invite-content">
-      <div class="brand-seal">वि</div>
-      <h1 class="brand-name">VIVAH</h1>
-      <p class="brand-tagline">Where two families<br>become one story.</p>
-      <div class="brand-diya" aria-hidden="true">
-        <span class="flame"></span>
-        <span class="base"></span>
-      </div>
-      <p class="brand-note">
-        A considered space for individuals and families to begin a marriage
-        search with care — not a swipe, a search built around intention.
-      </p>
-    </div>
-  </aside>
 
-  <!-- Right: Form Panel -->
-  <section class="login-form-panel">
-    <nav class="auth-switch">
-      <a href="{% url 'login' %}" class="active">Sign In</a>
-      <a href="{% url 'register' %}">Create Profile</a>
-    </nav>
+{% block layout %}
+<div class="auth-view">
+  <div class="auth-shell">
+    <!-- LEFT: Hero panel (same as login) -->
+    <aside class="auth-hero">
+      <svg class="motif m1" viewBox="0 0 200 200" fill="none">
+        <circle cx="100" cy="100" r="98" stroke="#fff" stroke-width="1.5"/>
+        <circle cx="100" cy="100" r="76" stroke="#fff" stroke-width="1"/>
+      </svg>
+      <svg class="motif m2" viewBox="0 0 200 200" fill="none">
+        <path d="M100 10 C150 40 150 120 100 190 C50 120 50 40 100 10Z" stroke="#fff" stroke-width="1.2"/>
+      </svg>
 
-    {% if messages %}
-      <ul class="form-messages">
-        {% for message in messages %}
-          <li class="form-message form-message--{{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-
-    <form method="post" class="vivah-form" novalidate>
-      {% csrf_token %}
-      <div class="field">
-        <label for="identifier">Email or mobile number</label>
-        <input type="text" id="identifier" name="identifier" required
-               autocomplete="username" placeholder="you@example.com"
-               value="{{ form_data.identifier|default:'' }}">
+      <div class="hero-logo">
+        <svg class="rings" viewBox="0 0 40 40" fill="none">
+          <circle cx="15" cy="20" r="11" stroke="#E8C170" stroke-width="2.5"/>
+          <circle cx="25" cy="20" r="11" stroke="#fff" stroke-width="2.5"/>
+        </svg>
+        <span>Vivaaah.com</span>
       </div>
 
-      <div class="field">
-        <label for="password">Password</label>
-        <div class="password-field">
-          <input type="password" id="password" name="password" required
-                 autocomplete="current-password" placeholder="••••••••">
-          <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
-            <span class="eye-icon"></span>
-          </button>
+      <div class="hero-mid">
+        <h1>"Where two souls&nbsp;find&nbsp;forever."</h1>
+        <p>India's trusted matrimony platform — helping families and individuals discover meaningful, lifelong companionship built on trust and shared values.</p>
+      </div>
+
+      <div class="hero-stats">
+        <div><strong>12L+</strong><span>Verified Profiles</span></div>
+        <div><strong>4.8L+</strong><span>Happy Marriages</span></div>
+        <div><strong>28+</strong><span>Communities</span></div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Registration form (simple) -->
+    <div class="auth-panel">
+      <div class="auth-panel-inner">
+        <div class="mobile-logo">
+          <svg class="rings" viewBox="0 0 40 40" fill="none">
+            <circle cx="15" cy="20" r="11" stroke="#C9972E" stroke-width="2.5"/>
+            <circle cx="25" cy="20" r="11" stroke="#6B1E3C" stroke-width="2.5"/>
+          </svg>
+          <span>Vivaaah.com</span>
         </div>
+
+        <form method="post" class="auth-form auth-form--register" novalidate>
+          {% csrf_token %}
+          <h2>Create your account</h2>
+          <p class="subtext">Start your journey to find the one.</p>
+
+          {% if messages %}
+            <div class="general-error show">
+              {% for message in messages %}
+                {{ message }}
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <!-- Email -->
+          <div class="field" id="regEmailField">
+            <label for="regEmail">Email address</label>
+            <input type="email" id="regEmail" name="email" required
+                   placeholder="you@example.com" autocomplete="email"
+                   value="{{ form_data.email|default:'' }}">
+            <div class="field-error" id="regEmailError"></div>
+          </div>
+
+          <!-- Password -->
+          <div class="field" id="regPasswordField">
+            <label for="regPassword">Password</label>
+            <div class="pw-wrap">
+              <input type="password" id="regPassword" name="password" required
+                     placeholder="Enter Correct Password" autocomplete="new-password">
+              <button type="button" class="pw-toggle" data-target="regPassword" aria-label="Show password">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+
+            <div class="field-error" id="regPasswordError"></div>
+          </div>
+
+
+
+          <!-- Terms -->
+          <label class="checkbox-field">
+            <input type="checkbox" name="terms" required>
+            <span>I agree to the <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</span>
+          </label>
+
+          <button type="submit" class="btn-primary">Create Account</button>
+
+          <p class="switch-line">Already have an account? <a href="{% url 'register' %}" class="link-btn">Sign in</a></p>
+        </form>
       </div>
-
-      <button type="submit" class="btn-primary">
-        <span class="btn-seal">वि</span>
-        Sign In
-      </button>
-    </form>
-
-    <p class="form-footnote">New to Vivah? <a href="{% url 'register' %}">Create your profile</a></p>
-  </section>
+    </div>
+  </div>
 </div>
+
+<script>
+  // Password strength meter
+  const pwInput = document.getElementById('regPassword');
+  const meterBars = document.querySelectorAll('#pwMeter i');
+  const meterLabel = document.getElementById('pwMeterLabel');
+  pwInput?.addEventListener('input', function() {
+    const val = this.value;
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const colors = ['#B3261E','#C9972E','#C9972E','#3F7A5D'];
+    const labels = ['Too weak','Weak','Good','Strong'];
+    const idx = Math.max(0, score - 1);
+    meterBars.forEach((bar, i) => {
+      bar.style.background = (val.length > 0 && i < Math.max(score, 1)) ? colors[idx] : '';
+    });
+    meterLabel.textContent = val.length === 0 ? 'Minimum 8 characters, with a number & an uppercase letter' : labels[idx];
+    meterLabel.style.color = val.length === 0 ? '' : colors[idx];
+  });
+</script>
 {% endblock %}

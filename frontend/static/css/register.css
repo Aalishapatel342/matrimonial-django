@@ -1,11 +1,65 @@
 /* =====================================================================
-   Register page – additional tweaks (e.g. password hint)
+   Register page – extra styling for registration form fields.
+   The main layout is already defined in auth.css – this file only
+   fine‑tunes the form for registration.
 ===================================================================== */
+
+/* Field rows (two‑column) */
+.auth-form--register .field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 0;
+}
+
+.auth-form--register .field-row .field {
+  margin-bottom: 0;
+}
+
+/* Gender group already styled in auth.css, but we ensure it's inline */
+.gender-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* Checkbox field (align with theme) */
+.checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 16px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.checkbox-field input {
+  margin-top: 3px;
+  accent-color: var(--maroon);
+}
+.checkbox-field a {
+  color: var(--maroon);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* Password hint */
 .field-hint {
   font-size: 0.8rem;
   color: var(--text-2);
   margin-top: 2px;
+  min-height: 1.4em;
 }
 .field-hint.is-error {
   color: #B3261E;
+}
+
+/* Responsive tweaks for the two‑column layout */
+@media (max-width: 600px) {
+  .auth-form--register .field-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .gender-group {
+    flex-direction: row;
+  }
 }
