@@ -15,6 +15,8 @@ from bson import ObjectId
 from .db import get_users_collection, get_db
 
 from .validators import validate_login, validate_registration
+from .pinned_utils import format_profile_card
+
 
 # Helper to convert MongoDB _id to str
 def serialize_user(user):
@@ -436,6 +438,7 @@ def notifications_list(request):
 @require_POST
 def interest_accept(request, profile_id):
     """Accept an incoming interest request and enable chat."""
+
     user_id = _require_user_id(request)
     if not user_id:
         return JsonResponse({"error": "Unauthorized"}, status=401)
@@ -669,6 +672,48 @@ def messages_send(request, partner_id):
     return JsonResponse({"ok": True})
 
 
+def pinned_profiles_list(request):
+    """Return profiles to show in the pinned/interests section.
+
+    We treat pinned profiles as the most recent profiles that have an accepted
+    connection with the current user.
+    """
+    user_id = _require_user_id(request)
+    if not user_id:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    me = ObjectId(user_id)
+    db = get_db()
+    connections = db["connections"]
+
+    # newest accepted connections first
+    conns = list(
+        connections.find(
+            {
+                "$or": [
+                    {"user1_id": me},
+                    {"user2_id": me},
+                ]
+            }
+        ).sort("created_at", -1).limit(6)
+    )
+
+    users = get_users_collection()
+    out = []
+    for c in conns:
+        other_id = c["user2_id"] if c.get("user1_id") == me else c.get("user1_id")
+        p = users.find_one({"_id": other_id})
+        if not p:
+            continue
+
+        # For interested state, treat as already connected
+        out.append(format_profile_card(p, score=None, interested=True))
+
+    # Remove nulls
+    out = [x for x in out if x]
+    return JsonResponse({"pinned_profiles": out})
+
+
 def debug_session_view(request):
     """Debug helper to inspect session state."""
     keys = list(request.session.keys())
@@ -678,3 +723,4 @@ def debug_session_view(request):
         "user_id": request.session.get("user_id"),
         "full_name": request.session.get("full_name"),
     })
+

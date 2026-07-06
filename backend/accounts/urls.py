@@ -10,6 +10,8 @@ urlpatterns = [
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("profile/<str:profile_id>/", views.profile_detail, name="profile_detail"),
     path("interest/<str:profile_id>/", views.toggle_interest, name="toggle_interest"),
+    path("pinned/", views.pinned_profiles_list, name="pinned_profiles_list"),
+
 
     # Notifications + Requests + Chat
     path("notifications/", views.notifications_list, name="notifications_list"),
