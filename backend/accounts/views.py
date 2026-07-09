@@ -3,7 +3,6 @@ import random
 import base64
 
 
-
 from django.contrib import messages
 from django.contrib.auth.hashers import check_password, make_password
 from django.shortcuts import redirect, render
@@ -94,7 +93,15 @@ def login_view(request):
                 request.session["user_id"] = str(user["_id"])
                 request.session["full_name"] = user["full_name"]
                 return redirect("dashboard")
-            errors.append("Email/mobile or password is incorrect.")
+
+            # More accurate error messages for the login form.
+            # - If account doesn't exist -> "Check your email"
+            # - If account exists but password wrong -> "Wrong password"
+            if not user:
+                errors.append("Check your email / phone number.")
+            else:
+                errors.append("Wrong password.")
+
 
         for err in errors:
             messages.error(request, err)
@@ -416,9 +423,6 @@ def notifications_list(request):
         ).sort("created_at", -1).limit(50)
     )
 
-    # Marking read is done on accept/decline; but the list endpoint can mark as read.
-    # We'll keep it non-destructive for better UX: client marks read implicitly by refreshing.
-
     payload = []
     users = get_users_collection()
     for n in notifs:
@@ -486,14 +490,12 @@ def interest_accept(request, profile_id):
             "created_at": datetime.utcnow(),
         })
     except Exception:
-        # If already exists, ignore.
         pass
 
     # Remove interest request
     interests.delete_one({"_id": existing_interest["_id"]})
 
     # Create notification for the other user
-    # (mark any existing unread interest_request notifications as read)
     notif_col.update_many({
         "to_user_id": incoming_from,
         "from_user_id": ObjectId(user_id),
@@ -509,7 +511,14 @@ def interest_accept(request, profile_id):
         "created_at": datetime.utcnow(),
     })
 
-    # Mark related incoming notification (for current user) as read
+    # Mark outgoing interest_request notifications from current user as read too
+    notif_col.update_many({
+        "to_user_id": ObjectId(user_id),
+        "from_user_id": incoming_from,
+        "type": "interest_request",
+        "status": "unread",
+    }, {"$set": {"status": "read"}})
+
     notif_col.update_many({
         "to_user_id": ObjectId(user_id),
         "from_user_id": incoming_from,
@@ -623,7 +632,6 @@ def messages_send(request, partner_id):
     except Exception:
         body = "{}"
 
-    # Accept either json payload or empty body
     text = ""
     try:
         import json
@@ -639,7 +647,6 @@ def messages_send(request, partner_id):
     messages_col = db["messages"]
     connections = db["connections"]
 
-    # Ensure they are connected
     conns = connections.find_one({
         "$or": [
             {
@@ -673,11 +680,7 @@ def messages_send(request, partner_id):
 
 
 def pinned_profiles_list(request):
-    """Return profiles to show in the pinned/interests section.
-
-    We treat pinned profiles as the most recent profiles that have an accepted
-    connection with the current user.
-    """
+    """Return profiles to show in the pinned/interests section."""
     user_id = _require_user_id(request)
     if not user_id:
         return JsonResponse({"error": "Unauthorized"}, status=401)
@@ -686,7 +689,6 @@ def pinned_profiles_list(request):
     db = get_db()
     connections = db["connections"]
 
-    # newest accepted connections first
     conns = list(
         connections.find(
             {
@@ -706,10 +708,8 @@ def pinned_profiles_list(request):
         if not p:
             continue
 
-        # For interested state, treat as already connected
         out.append(format_profile_card(p, score=None, interested=True))
 
-    # Remove nulls
     out = [x for x in out if x]
     return JsonResponse({"pinned_profiles": out})
 

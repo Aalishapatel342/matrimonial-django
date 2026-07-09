@@ -189,6 +189,7 @@
     <!-- MAIN CONTENT -->
     <main class="main-content" id="mainContent">
       <div class="welcome-banner">
+
         <h1>Welcome, {{ full_name|truncatechars:20 }}</h1>
         <p>{% if user_gender == 'male' %}Here are bride profiles curated for you.{% else %}Here are groom profiles curated for you.{% endif %}</p>
       </div>
@@ -222,9 +223,27 @@
         <button class="filter-reset" id="resetFilters">Reset</button>
       </div>
 
+      <!-- Interests section (accepted connections from both sides) -->
+      <section class="interests-section" id="interestsSection" style="display:none;">
+        <div class="pinned-header">
+          <div>
+            <div class="pinned-title">Interests</div>
+            <div class="pinned-subtitle">Accepted requests & active connections</div>
+          </div>
+        </div>
+        <div class="pinned-grid" id="interestsGrid">
+          <div class="empty-state" style="padding:40px 0;">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <h3>No interests yet</h3>
+            <p>When someone accepts your request, their profile will appear here.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- Profile Grid -->
       <div class="profile-grid" id="profileGrid">
         {% for profile in profiles %}
+
           <div class="profile-card" data-id="{{ profile.id }}">
             <div class="pc-head">
               <div class="avatar-lg" style="{{ profile.full_name|avatar_style }}">{{ profile.full_name|initials }}</div>
@@ -620,8 +639,110 @@
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
+    // Interests (pinned connections from both sides)
+    async function loadInterests() {
+      try {
+        const res = await fetch('/pinned/', { method: 'GET' });
+        const data = await res.json();
+        const grid = document.getElementById('interestsGrid');
+        if (!grid) return;
+
+        const cards = (data.pinned_profiles || []).map(p => {
+          const verified = p.verified ? `
+            <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
+          ` : '';
+
+          return `
+            <div class="profile-card" data-id="${escHtml(p.id)}" style="cursor:default;">
+              <div class="pc-head">
+                <div class="avatar-lg" style="${p.profile_pic_is_profile_pic && p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase() )}</div>
+                <div>
+                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}
+                  </div>
+                  <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+                </div>
+              </div>
+              <div class="pc-tags">
+                <span class="pc-tag">${escHtml(p.religion || '')}</span>
+                <span class="pc-tag">${escHtml(p.height || '')}</span>
+                <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
+              </div>
+              <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
+              <div class="pc-match">
+                <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
+                <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
+              </div>
+              <div class="pc-actions">
+                <button class="pc-btn view" type="button" data-action="view" data-id="${escHtml(p.id)}">View</button>
+                <button class="pc-btn" type="button" disabled style="opacity:.7;cursor:not-allowed;">Connected</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        if (!cards) {
+          grid.innerHTML = `
+            <div class="empty-state" style="padding:40px 0;">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+              <h3>No interests yet</h3>
+              <p>When someone accepts your request, their profile will appear here.</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = cards;
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    function showSection(section) {
+      const interestsSection = document.getElementById('interestsSection');
+      const profileGrid = document.getElementById('profileGrid');
+      const main = profileGrid?.closest('.main-content');
+      const filterBar = main?.querySelector('.filter-bar');
+
+      if (!interestsSection || !profileGrid) return;
+
+      if (section === 'interests') {
+        if (filterBar) filterBar.style.display = 'none';
+        profileGrid.style.display = 'none';
+        interestsSection.style.display = 'block';
+      } else {
+        if (filterBar) filterBar.style.display = 'flex';
+        profileGrid.style.display = 'grid';
+        interestsSection.style.display = 'none';
+      }
+    }
+
+
+    // Navbar section switching
+    document.querySelectorAll('[data-section]').forEach(a => {
+      a.addEventListener('click', (e) => {
+
+        e.preventDefault();
+        const section = a.dataset.section;
+        document.querySelectorAll('[data-section]').forEach(x => x.classList.remove('active'));
+        a.classList.add('active');
+
+        showSection(section);
+        if (section === 'interests') loadInterests();
+      });
+    });
+
+    // Interests grid event delegation (View)
+    document.getElementById('interestsGrid')?.addEventListener('click', function(e) {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (btn.dataset.action === 'view') openModal(id);
+    });
+
     // Grid event delegation
     document.getElementById('profileGrid').addEventListener('click', function(e) {
+
+
       const btn = e.target.closest('button[data-action]');
       if (!btn) return;
       const id = btn.dataset.id;

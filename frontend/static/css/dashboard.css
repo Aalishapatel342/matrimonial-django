@@ -454,8 +454,58 @@
 }
 .filter-reset:hover { border-color: var(--maroon); color: var(--maroon); }
 
+/* ---- Pinned / Interests ---- */
+.pinned-section, .interests-section {
+  margin-bottom: 22px;
+}
+.pinned-header {
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 14px 0;
+  gap: 12px;
+}
+.pinned-title {
+  font-family: var(--font-d);
+  font-size: 22px;
+  color: var(--maroon-dark);
+}
+.pinned-subtitle {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.pinned-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
 /* ---- Profile grid ---- */
 .profile-grid {
+
+  margin-bottom: 22px;
+}
+.pinned-header {
+  display:flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 14px 0;
+  gap: 12px;
+}
+.pinned-title {
+  font-family: var(--font-d);
+  font-size: 22px;
+  color: var(--maroon-dark);
+}
+.pinned-subtitle {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* ---- Profile grid ---- */
+.profile-grid {
+
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
