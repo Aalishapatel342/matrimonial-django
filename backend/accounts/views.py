@@ -248,8 +248,32 @@ def profile_detail(request, profile_id):
 @require_POST
 def toggle_interest(request, profile_id):
     user_id = request.session.get("user_id")
+
+    # If two users are already connected, do not allow interest toggle again.
+    if user_id:
+        db = get_db()
+        connections = db["connections"]
+        me = ObjectId(user_id)
+        try:
+            target = ObjectId(profile_id)
+        except Exception:
+            target = None
+
+        if target and connections.find_one({
+            "$or": [
+                {"user1_id": me, "user2_id": target},
+                {"user1_id": target, "user2_id": me},
+            ]
+        }):
+            return JsonResponse({
+                "interested": True,
+                "connected": True,
+                "message": "Already connected"
+            }, status=200)
+
     if not user_id:
         return JsonResponse({"error": "Unauthorized"}, status=401)
+
 
     users = get_users_collection()
     profile = users.find_one({"_id": ObjectId(profile_id)})
