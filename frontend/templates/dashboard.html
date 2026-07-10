@@ -9,7 +9,6 @@
   <div style="display:none" id="csrfToken">{{ csrf_token }}</div>
   <script>window.CSRF_TOKEN = document.getElementById('csrfToken').textContent.trim();</script>
   <script>
-    // Keep CSRF helper + chat code stable even if templates/session differ.
     window.USER_ID = "{{ request.session.user_id|default:'' }}";
   </script>
 
@@ -84,7 +83,7 @@
             </div>
           </div>
           <hr class="dropdown-divider" />
-          <a href="{% url 'edit_profile' %}" class="dropdown-item">My Profile</a>
+          <a href="{% url 'edit_profile_root' %}" class="dropdown-item">My Profile</a>
           <a href="#" class="dropdown-item">Edit Profile</a>
           <a href="#" class="dropdown-item">Partner Preferences</a>
           <a href="#" class="dropdown-item">Subscription</a>
@@ -96,7 +95,7 @@
     </div>
   </header>
 
-  <!-- SLIDE PANELS (dummy) -->
+  <!-- SLIDE PANELS -->
   <div class="overlay" id="overlay"></div>
   <div class="slide-panel" id="notifPanel">
     <div class="slide-panel__header">
@@ -109,6 +108,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Chat panel (list only) -->
   <div class="slide-panel" id="chatPanel">
     <div class="slide-panel__header">
       <h3>Messages</h3>
@@ -117,24 +118,30 @@
     <div class="slide-panel__body">
       <div class="chat-shell">
         <div class="chat-sidebar" id="chatConversationList"></div>
-        <div class="chat-main">
-          <div class="chat-empty" id="chatEmpty">Select a chat to start messaging.</div>
-          <div class="chat-thread" id="chatThread" style="display:none;">
-            <div class="chat-thread-header" id="chatPartnerName"></div>
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-composer">
-              <input id="chatInput" type="text" placeholder="Type a message..." maxlength="500" />
-              <button id="chatSendBtn">Send</button>
-            </div>
-          </div>
-        </div>
+        <div class="chat-main" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── CHAT POPUP MODAL ─── -->
+  <div class="modal-overlay" id="chatModal">
+    <div class="modal-card" style="max-width:500px; height:auto; max-height:80vh; display:flex; flex-direction:column;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
+        <h3 id="chatPopupPartnerName" style="font-family:var(--font-d); font-size:1.3rem; margin:0;">Chat</h3>
+        <button class="modal-close" id="chatPopupClose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="chatPopupMessages" style="flex:1; overflow-y:auto; padding:8px 0; margin-bottom:12px; min-height:200px; max-height:50vh;"></div>
+      <div class="chat-composer" style="display:flex; gap:8px; border-top:1px solid var(--border); padding-top:12px;">
+        <input id="chatPopupInput" type="text" placeholder="Type a message..." maxlength="500" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:20px; background:var(--cream); color:var(--text);" />
+        <button id="chatPopupSendBtn" class="pc-btn view" style="border-radius:20px; padding:8px 16px;">Send</button>
       </div>
     </div>
   </div>
 
   <!-- APP SHELL -->
   <div class="app-shell">
-    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-profile">
         <div class="sidebar-profile__photo-wrap">
@@ -168,8 +175,8 @@
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Discovery</span>
           <a href="#" class="sidebar-link" data-section="search">Search Profiles</a>
-          <a href="#" class="sidebar-link" data-section="matches">Recommended <span class="sidebar-link__count">24</span></a>
-          <a href="#" class="sidebar-link" data-section="shortlisted">Shortlisted <span class="sidebar-link__count">8</span></a>
+          <a href="#" class="sidebar-link" data-section="matches">Matches <span class="sidebar-link__count" id="matchesCount">0</span></a>
+          <a href="#" class="sidebar-link" data-section="shortlisted">Shortlisted <span class="sidebar-link__count" id="shortlistedCount">0</span></a>
         </div>
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Activity</span>
@@ -186,23 +193,21 @@
       </nav>
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="main-content" id="mainContent">
       <div class="welcome-banner">
-
         <h1>Welcome, {{ full_name|truncatechars:20 }}</h1>
         <p>{% if user_gender == 'male' %}Here are bride profiles curated for you.{% else %}Here are groom profiles curated for you.{% endif %}</p>
       </div>
 
       <div class="stats-row">
-        <div class="stat-card"><h3>{{ profiles|length }}</h3><p>Potential Matches</p></div>
+        <div class="stat-card"><h3 id="totalMatches">{{ profiles|length }}</h3><p>Potential Matches</p></div>
         <div class="stat-card"><h3>0</h3><p>Interests Sent</p></div>
         <div class="stat-card"><h3>0</h3><p>Interests Received</p></div>
         <div class="stat-card"><h3>78%</h3><p>Profile Strength</p></div>
       </div>
 
-      <!-- Filter bar -->
-      <div class="filter-bar">
+      <!-- Global Filter bar (visible on overview/search) -->
+      <div class="filter-bar" id="globalFilterBar">
         <div class="filter-search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
           <input type="text" id="searchInput" placeholder="Search by name or profession..." value="{{ search }}">
@@ -223,7 +228,68 @@
         <button class="filter-reset" id="resetFilters">Reset</button>
       </div>
 
-      <!-- Interests section (accepted connections from both sides) -->
+      <!-- ─── MATCHES SECTION with advanced filter form ─── -->
+      <section class="matches-section" id="matchesSection" style="display:none;">
+        <div class="pinned-header">
+          <div>
+            <div class="pinned-title">Find Your Match</div>
+            <div class="pinned-subtitle">Refine your search with detailed criteria</div>
+          </div>
+        </div>
+        <form id="matchesFilterForm" class="matches-filter-form">
+          <div class="filter-grid">
+            <div class="filter-group">
+              <label for="mReligion">Religion</label>
+              <input type="text" id="mReligion" name="religion" placeholder="e.g. Hindu, Muslim" />
+            </div>
+            <div class="filter-group">
+              <label for="mProfession">Profession</label>
+              <input type="text" id="mProfession" name="profession" placeholder="e.g. Engineer, Doctor" />
+            </div>
+            <div class="filter-group">
+              <label for="mCity">City</label>
+              <input type="text" id="mCity" name="city" placeholder="e.g. Mumbai, Delhi" />
+            </div>
+            <div class="filter-group">
+              <label for="mEducation">Education</label>
+              <input type="text" id="mEducation" name="education" placeholder="e.g. B.Tech, MBA" />
+            </div>
+            <div class="filter-group">
+              <label for="mMotherTongue">Mother Tongue</label>
+              <input type="text" id="mMotherTongue" name="mother_tongue" placeholder="e.g. Hindi, Tamil" />
+            </div>
+            <div class="filter-group">
+              <label for="mHeight">Height</label>
+              <input type="text" id="mHeight" name="height" placeholder="e.g. 5'10\"" />
+            </div>
+            <div class="filter-group filter-range">
+              <label>Age Range</label>
+              <div class="range-inputs">
+                <input type="number" id="mAgeMin" name="age_min" placeholder="Min" min="18" />
+                <span>–</span>
+                <input type="number" id="mAgeMax" name="age_max" placeholder="Max" min="18" />
+              </div>
+            </div>
+            <div class="filter-group filter-range">
+              <label>Salary (Annual)</label>
+              <div class="range-inputs">
+                <input type="number" id="mSalaryMin" name="salary_min" placeholder="Min" min="0" step="10000" />
+                <span>–</span>
+                <input type="number" id="mSalaryMax" name="salary_max" placeholder="Max" min="0" step="10000" />
+              </div>
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button type="submit" class="btn-primary">Apply Filters</button>
+            <button type="reset" class="filter-reset" id="resetMatchesFilters">Clear All</button>
+          </div>
+        </form>
+        <div class="matches-results">
+          <div class="profile-grid" id="matchesGrid"></div>
+        </div>
+      </section>
+
+      <!-- Interests section -->
       <section class="interests-section" id="interestsSection" style="display:none;">
         <div class="pinned-header">
           <div>
@@ -240,11 +306,27 @@
         </div>
       </section>
 
-      <!-- Profile Grid -->
+      <!-- Shortlisted section -->
+      <section class="shortlisted-section" id="shortlistedSection" style="display:none;">
+        <div class="pinned-header">
+          <div>
+            <div class="pinned-title">Shortlisted</div>
+            <div class="pinned-subtitle">Profiles you have liked</div>
+          </div>
+        </div>
+        <div class="profile-grid shortlisted-grid" id="shortlistedGrid">
+          <div class="empty-state" style="padding:40px 0;">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <h3>No shortlisted profiles</h3>
+            <p>Click the heart icon on a profile to add it here.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Profile Grid (overview, search, etc.) -->
       <div class="profile-grid" id="profileGrid">
         {% for profile in profiles %}
-
-          <div class="profile-card" data-id="{{ profile.id }}">
+          <div class="profile-card" data-id="{{ profile.id }}" data-wishlisted="{% if profile.wishlisted %}true{% else %}false{% endif %}">
             <div class="pc-head">
               <div class="avatar-lg" style="{{ profile.full_name|avatar_style }}">{{ profile.full_name|initials }}</div>
               <div>
@@ -267,9 +349,18 @@
               <div class="pc-match-track"><div class="pc-match-fill" style="width:{{ profile.compatibility }}%;"></div></div>
             </div>
             <div class="pc-actions">
+              <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="{{ profile.id }}" title="Add to shortlist">
+                <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="{% if profile.wishlisted %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </button>
               <button class="pc-btn view" data-action="view" data-id="{{ profile.id }}">View</button>
               <button class="pc-btn interest{% if profile.interested %} sent{% endif %}" data-action="interest" data-id="{{ profile.id }}">
-                {% if profile.interested %}Interest Sent{% else %}Send Interest{% endif %}
+                {% if profile.interested %}
+                  Interest Sent
+                {% else %}
+                  Send Interest
+                {% endif %}
               </button>
             </div>
           </div>
@@ -284,7 +375,7 @@
     </main>
   </div>
 
-  <!-- MODAL -->
+  <!-- Profile Modal -->
   <div class="modal-overlay" id="profileModal">
     <div class="modal-card" id="modalCard"></div>
   </div>
@@ -317,6 +408,13 @@
       });
       document.addEventListener('click', function(e) {
         if (!e.target.closest('#profileDropdownBtn')) dropdown.classList.remove('open');
+      });
+      dropdown.querySelectorAll('a[href]').forEach(a => {
+        if (a.id === 'dashboardLogoutBtn' || a.getAttribute('href') === '/logout/' || a.getAttribute('href')?.endsWith('/logout/')) {
+          a.addEventListener('click', (e) => {
+            e.stopPropagation();
+          });
+        }
       });
     }
 
@@ -400,6 +498,7 @@
         .replaceAll("'", '&#039;');
     }
 
+    // ─── Notifications ───
     async function loadNotifications() {
       try {
         const res = await fetch('/notifications/', { method: 'GET' });
@@ -410,7 +509,6 @@
           list.innerHTML = '<div style="text-align:center;color:var(--text-2);padding:40px 0;">No notifications yet.</div>';
           return;
         }
-
         list.innerHTML = data.notifications.map(n => {
           const name = escHtml(n.from_full_name || 'User');
           return `
@@ -435,6 +533,17 @@
             showToast('Request accepted', 'success');
             loadNotifications();
             loadConversations();
+            loadInterests();
+            syncMainButtons();
+            try {
+              const interestsLink = document.querySelector('a[data-section="interests"]');
+              const badge = interestsLink ? interestsLink.querySelector('.sidebar-link__count') : null;
+              if (badge) {
+                const cardsRes = await fetch('/pinned/', { method: 'GET' });
+                const cardsData = await cardsRes.json();
+                badge.textContent = (cardsData.pinned_profiles || []).length;
+              }
+            } catch (e) { /* ignore */ }
           });
         });
 
@@ -449,13 +558,14 @@
             showToast('Request rejected', '');
             loadNotifications();
             loadConversations();
+            loadInterests();
+            syncMainButtons();
           });
         });
-      } catch (e) {
-        // swallow
-      }
+      } catch (e) { /* swallow */ }
     }
 
+    // ─── Chat: load conversation list ───
     async function loadConversations() {
       try {
         const res = await fetch('/conversations/');
@@ -463,15 +573,9 @@
         const list = document.getElementById('chatConversationList');
         if (!list) return;
         if (!data.conversations || data.conversations.length === 0) {
-          list.innerHTML = '';
-          document.getElementById('chatEmpty').style.display = 'block';
-          document.getElementById('chatThread').style.display = 'none';
+          list.innerHTML = '<div style="text-align:center;color:var(--text-2);padding:20px 0;">No conversations yet.</div>';
           return;
         }
-
-        document.getElementById('chatEmpty').style.display = 'none';
-        document.getElementById('chatThread').style.display = 'none';
-
         list.innerHTML = data.conversations.map(c => {
           return `
             <button class="chat-partner" data-partner-id="${escHtml(c.partner_id)}" style="width:100%;text-align:left;border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:10px;background:var(--cream);cursor:pointer;">
@@ -482,35 +586,45 @@
 
         list.querySelectorAll('.chat-partner').forEach(btn => {
           btn.addEventListener('click', () => {
-            loadMessages(btn.dataset.partnerId);
+            closeChatPopup();
+            openChatPopup(btn.dataset.partnerId);
           });
         });
-      } catch (e) {
-        // swallow
-      }
+      } catch (e) { /* swallow */ }
     }
 
-    async function loadMessages(partnerId) {
+    // ─── Chat popup functions ───
+    let currentChatPartnerId = null;
+
+    function openChatPopup(partnerId) {
+      if (!partnerId) return;
+      currentChatPartnerId = partnerId;
+      loadMessagesIntoPopup(partnerId);
+      document.getElementById('chatModal').classList.add('open');
+    }
+
+    function closeChatPopup() {
+      document.getElementById('chatModal').classList.remove('open');
+      currentChatPartnerId = null;
+    }
+
+    async function loadMessagesIntoPopup(partnerId) {
       try {
         const res = await fetch(`/messages/${partnerId}/`);
         const data = await res.json();
-        const thread = document.getElementById('chatThread');
-        const msgs = document.getElementById('chatMessages');
-        const name = document.getElementById('chatPartnerName');
-        if (!thread || !msgs || !name) return;
+        const nameEl = document.getElementById('chatPopupPartnerName');
+        const msgsEl = document.getElementById('chatPopupMessages');
+        if (!nameEl || !msgsEl) return;
 
-        msgs.innerHTML = '';
-        name.textContent = data.partner_full_name ? data.partner_full_name : '';
-        thread.style.display = 'block';
-        document.getElementById('chatEmpty').style.display = 'none';
+        nameEl.textContent = data.partner_full_name || 'Chat';
+        msgsEl.innerHTML = '';
 
         (data.messages || []).forEach(m => {
           const mine = (m.sender_id && m.sender_id === (window.USER_ID || document.body.dataset.userId));
-
           const align = mine ? 'flex-end' : 'flex-start';
           const bubbleBg = mine ? '#E7F3EC' : 'var(--cream)';
           const bubbleBorder = mine ? '#3F7A5D' : 'var(--border)';
-          msgs.insertAdjacentHTML('beforeend', `
+          msgsEl.insertAdjacentHTML('beforeend', `
             <div style="display:flex;justify-content:${align};margin-bottom:10px;">
               <div style="max-width:75%;background:${bubbleBg};border:1px solid ${bubbleBorder};border-radius:14px;padding:10px 12px;">
                 <div style="font-size:13px;color:var(--text);line-height:1.4;">${escHtml(m.text)}</div>
@@ -518,26 +632,14 @@
             </div>
           `);
         });
-        await scrollToBottom(msgs);
-        window.currentChatPartnerId = partnerId;
-      } catch (e) {
-        // swallow
-      }
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+      } catch (e) { /* swallow */ }
     }
 
-    function scrollToBottom(el) {
-      return new Promise(resolve => {
-        setTimeout(() => {
-          el.scrollTop = el.scrollHeight;
-          resolve();
-        }, 0);
-      });
-    }
-
-    async function sendMessage() {
-      const partnerId = window.currentChatPartnerId;
+    async function sendPopupMessage() {
+      const partnerId = currentChatPartnerId;
       if (!partnerId) return;
-      const input = document.getElementById('chatInput');
+      const input = document.getElementById('chatPopupInput');
       if (!input) return;
       const text = (input.value || '').trim();
       if (!text) return;
@@ -548,22 +650,125 @@
         body: JSON.stringify({ text })
       });
       input.value = '';
-      await loadMessages(partnerId);
+      await loadMessagesIntoPopup(partnerId);
     }
 
-    document.getElementById('chatSendBtn')?.addEventListener('click', sendMessage);
-    document.getElementById('chatInput')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendMessage();
+    document.getElementById('chatPopupClose')?.addEventListener('click', closeChatPopup);
+    document.getElementById('chatPopupSendBtn')?.addEventListener('click', sendPopupMessage);
+    document.getElementById('chatPopupInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendPopupMessage();
+    });
+    document.getElementById('chatModal')?.addEventListener('click', function(e) {
+      if (e.target === this) closeChatPopup();
     });
 
-    // Toggle interest
+    // ─── Wishlist / Shortlist ───
+    async function toggleWishlist(profileId, cardElement) {
+      try {
+        const res = await fetch(`/wishlist/toggle/${profileId}/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        const data = await res.json();
+        const isWishlisted = data.wishlisted;
+        if (cardElement) {
+          cardElement.dataset.wishlisted = isWishlisted ? 'true' : 'false';
+          const heart = cardElement.querySelector('.heart-icon');
+          if (heart) {
+            heart.setAttribute('fill', isWishlisted ? 'currentColor' : 'none');
+          }
+        }
+        updateShortlistedCount();
+        const shortlistedSection = document.getElementById('shortlistedSection');
+        if (shortlistedSection && getComputedStyle(shortlistedSection).display !== 'none') {
+          loadShortlisted();
+        }
+        showToast(isWishlisted ? 'Added to shortlist' : 'Removed from shortlist', 'success');
+      } catch (e) {
+        showToast('Error updating wishlist', 'error');
+      }
+    }
+
+    async function updateShortlistedCount() {
+      try {
+        const res = await fetch('/wishlist/count/');
+        const data = await res.json();
+        const badge = document.getElementById('shortlistedCount');
+        if (badge) badge.textContent = data.count || 0;
+      } catch (e) { /* ignore */ }
+    }
+
+    async function loadShortlisted() {
+      try {
+        const res = await fetch('/wishlist/');
+        const data = await res.json();
+        const grid = document.getElementById('shortlistedGrid');
+        if (!grid) return;
+
+        const profiles = data.profiles || [];
+        if (profiles.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state" style="padding:40px 0;">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <h3>No shortlisted profiles</h3>
+              <p>Click the heart icon on a profile to add it here.</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = profiles.map(p => {
+          const verified = p.verified ? `
+            <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
+          ` : '';
+          return `
+            <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="true">
+              <div class="pc-head">
+                <div class="avatar-lg" style="${p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
+                <div>
+                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
+                  <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+                </div>
+              </div>
+              <div class="pc-tags">
+                <span class="pc-tag">${escHtml(p.religion || '')}</span>
+                <span class="pc-tag">${escHtml(p.height || '')}</span>
+                <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
+              </div>
+              <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
+              <div class="pc-match">
+                <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
+                <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
+              </div>
+              <div class="pc-actions">
+                <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Remove from shortlist">
+                  <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </button>
+                <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}">View</button>
+                <button class="pc-btn interest${p.interested ? ' sent' : ''}" data-action="interest" data-id="${escHtml(p.id)}">
+                  ${p.interested ? 'Interest Sent' : 'Send Interest'}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) { /* ignore */ }
+    }
+
+    // ─── Toggle interest ───
     function toggleInterest(profileId, callback) {
+      if (!profileId) return;
+      const btn = document.querySelector(`.profile-card[data-id="${profileId}"] .interest`);
+      if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '.6';
+      }
       fetch(`/interest/${profileId}/`, {
         method: 'POST',
-        headers: {
-          'X-CSRFToken': csrftoken,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       })
       .then(response => response.json())
@@ -580,10 +785,16 @@
           modalBtn.classList.toggle('sent', data.interested);
         }
       })
-      .catch(() => showToast('Error toggling interest', 'error'));
+      .catch(() => showToast('Error toggling interest', 'error'))
+      .finally(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '';
+        }
+      });
     }
 
-    // Open modal
+    // ─── Modal for profile view ───
     function openModal(profileId) {
       fetch(`/profile/${profileId}/`)
         .then(res => res.json())
@@ -597,7 +808,6 @@
               <div class="avatar-lg" style="background:linear-gradient(135deg, #6B1E3C, #C9972E);">
                 ${data.profile_pic ? `<img src="${data.profile_pic}" alt="${data.full_name}" style="width:100%;height:100%;border-radius:16px;object-fit:cover;"/>` : `${data.full_name.split(' ').map(w=>w[0]).join('').toUpperCase()}`}
               </div>
-
               <div><h2>${data.full_name}${data.verified ? ' <span class="verified-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>' : ''}</h2>
               <p>${data.profession} · ${data.city}</p></div>
             </div>
@@ -639,7 +849,38 @@
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-    // Interests (pinned connections from both sides)
+    // ─── Sync main buttons (interest status) ───
+    async function syncMainButtons() {
+      try {
+        const cards = document.querySelectorAll('#profileGrid .profile-card[data-id]');
+        for (const card of cards) {
+          const profileId = card.dataset.id;
+          const btn = card.querySelector('button[data-action="interest"]');
+          if (!btn) continue;
+
+          const res = await fetch(`/connection-status/${profileId}/`, { method: 'GET' });
+          const data = await res.json();
+          if (data.state === 'connected') {
+            btn.textContent = 'Connected';
+            btn.disabled = true;
+            btn.style.opacity = '.7';
+            btn.style.cursor = 'not-allowed';
+          } else if (data.state === 'pending') {
+            btn.textContent = 'Interest Sent';
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.style.cursor = '';
+          } else {
+            btn.textContent = 'Send Interest';
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.style.cursor = '';
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // ─── Load interests ───
     async function loadInterests() {
       try {
         const res = await fetch('/pinned/', { method: 'GET' });
@@ -651,14 +892,12 @@
           const verified = p.verified ? `
             <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
           ` : '';
-
           return `
             <div class="profile-card" data-id="${escHtml(p.id)}" style="cursor:default;">
               <div class="pc-head">
                 <div class="avatar-lg" style="${p.profile_pic_is_profile_pic && p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase() )}</div>
                 <div>
-                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}
-                  </div>
+                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
                   <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
                 </div>
               </div>
@@ -690,75 +929,191 @@
           `;
           return;
         }
-
         grid.innerHTML = cards;
+      } catch (e) { /* ignore */ }
+    }
+
+    // ─── Matches advanced filter ───
+    async function applyMatchesFilters(formData) {
+      const params = new URLSearchParams();
+      for (const [key, value] of formData.entries()) {
+        if (value) params.append(key, value);
+      }
+      try {
+        const res = await fetch(`/api/profiles/?${params.toString()}`);
+        const data = await res.json();
+        const grid = document.getElementById('matchesGrid');
+        if (!grid) return;
+
+        const profiles = data.profiles || [];
+        if (profiles.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state" style="padding:40px 0;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+              <h3>No matches found</h3>
+              <p>Try adjusting your filters.</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = profiles.map(p => {
+          const verified = p.verified ? `
+            <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
+          ` : '';
+          return `
+            <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}">
+              <div class="pc-head">
+                <div class="avatar-lg" style="${p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
+                <div>
+                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
+                  <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+                </div>
+              </div>
+              <div class="pc-tags">
+                <span class="pc-tag">${escHtml(p.religion || '')}</span>
+                <span class="pc-tag">${escHtml(p.height || '')}</span>
+                <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
+              </div>
+              <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
+              <div class="pc-match">
+                <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
+                <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
+              </div>
+              <div class="pc-actions">
+                <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist">
+                  <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                </button>
+                <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}">View</button>
+                <button class="pc-btn interest${p.interested ? ' sent' : ''}" data-action="interest" data-id="${escHtml(p.id)}">
+                  ${p.interested ? 'Interest Sent' : 'Send Interest'}
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Update match count
+        document.getElementById('matchesCount').textContent = profiles.length;
       } catch (e) {
-        // ignore
+        showToast('Error fetching matches', 'error');
       }
     }
 
+    // ─── Section switching ───
     function showSection(section) {
       const interestsSection = document.getElementById('interestsSection');
+      const shortlistedSection = document.getElementById('shortlistedSection');
+      const matchesSection = document.getElementById('matchesSection');
       const profileGrid = document.getElementById('profileGrid');
+      const globalFilter = document.getElementById('globalFilterBar');
       const main = profileGrid?.closest('.main-content');
-      const filterBar = main?.querySelector('.filter-bar');
 
-      if (!interestsSection || !profileGrid) return;
+      // Hide all sections
+      if (interestsSection) interestsSection.style.display = 'none';
+      if (shortlistedSection) shortlistedSection.style.display = 'none';
+      if (matchesSection) matchesSection.style.display = 'none';
+      if (profileGrid) profileGrid.style.display = 'none';
+      if (globalFilter) globalFilter.style.display = 'none';
 
+      // Show selected
       if (section === 'interests') {
-        if (filterBar) filterBar.style.display = 'none';
-        profileGrid.style.display = 'none';
-        interestsSection.style.display = 'block';
+        if (interestsSection) interestsSection.style.display = 'block';
+        if (globalFilter) globalFilter.style.display = 'flex';
+        loadInterests();
+      } else if (section === 'shortlisted') {
+        if (shortlistedSection) shortlistedSection.style.display = 'block';
+        loadShortlisted();
+      } else if (section === 'matches') {
+        if (matchesSection) matchesSection.style.display = 'block';
+        // Optionally auto-apply empty filters to show all?
+        // We'll let the user submit the form.
+        // But we can load initial results with no filters (show all)
+        const form = document.getElementById('matchesFilterForm');
+        const formData = new FormData(form);
+        applyMatchesFilters(formData);
       } else {
-        if (filterBar) filterBar.style.display = 'flex';
-        profileGrid.style.display = 'grid';
-        interestsSection.style.display = 'none';
+        // Default: show main profile grid (overview, search, etc.)
+        if (profileGrid) profileGrid.style.display = 'grid';
+        if (globalFilter) globalFilter.style.display = 'flex';
       }
     }
-
 
     // Navbar section switching
     document.querySelectorAll('[data-section]').forEach(a => {
       a.addEventListener('click', (e) => {
-
         e.preventDefault();
         const section = a.dataset.section;
         document.querySelectorAll('[data-section]').forEach(x => x.classList.remove('active'));
         a.classList.add('active');
-
         showSection(section);
-        if (section === 'interests') loadInterests();
       });
     });
 
-    // Interests grid event delegation (View)
-    document.getElementById('interestsGrid')?.addEventListener('click', function(e) {
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const id = btn.dataset.id;
-      if (btn.dataset.action === 'view') openModal(id);
+    // ─── Matches filter form submit ───
+    document.getElementById('matchesFilterForm')?.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      applyMatchesFilters(formData);
     });
 
-    // Grid event delegation
-    document.getElementById('profileGrid').addEventListener('click', function(e) {
+    // Reset matches filters
+    document.getElementById('resetMatchesFilters')?.addEventListener('click', function() {
+      const form = document.getElementById('matchesFilterForm');
+      form.reset();
+      const formData = new FormData(form);
+      applyMatchesFilters(formData);
+    });
 
+    // Initial count for matches (total profiles)
+    document.getElementById('matchesCount').textContent = "{{ profiles|length }}";
 
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const id = btn.dataset.id;
-      if (btn.dataset.action === 'view') {
-        openModal(id);
-      } else if (btn.dataset.action === 'interest') {
-        toggleInterest(id, (newState) => {
-          btn.textContent = newState ? 'Interest Sent' : 'Send Interest';
-          btn.classList.toggle('sent', newState);
-          showToast(newState ? 'Interest sent!' : 'Interest withdrawn.', newState ? 'success' : '');
-        });
+    // Initial sync for shortlisted
+    updateShortlistedCount();
+    syncMainButtons();
+
+    // ─── Event Delegation: Wishlist, View, Interest (works for both main grid and matches grid) ───
+    document.addEventListener('click', function(e) {
+      // Wishlist button
+      const wishBtn = e.target.closest('[data-action="wishlist"]');
+      if (wishBtn) {
+        e.preventDefault();
+        const profileId = wishBtn.dataset.id;
+        const card = wishBtn.closest('.profile-card');
+        if (card) {
+          toggleWishlist(profileId, card);
+        }
+        return;
+      }
+
+      // View button
+      const viewBtn = e.target.closest('[data-action="view"]');
+      if (viewBtn) {
+        e.preventDefault();
+        const profileId = viewBtn.dataset.id;
+        if (profileId) openModal(profileId);
+        return;
+      }
+
+      // Interest button
+      const interestBtn = e.target.closest('[data-action="interest"]');
+      if (interestBtn) {
+        e.preventDefault();
+        const profileId = interestBtn.dataset.id;
+        if (profileId) {
+          toggleInterest(profileId, (newState) => {
+            interestBtn.textContent = newState ? 'Interest Sent' : 'Send Interest';
+            interestBtn.classList.toggle('sent', newState);
+            showToast(newState ? 'Interest sent!' : 'Interest withdrawn.', newState ? 'success' : '');
+          });
+        }
       }
     });
 
-    // Filters (submit via GET)
-    function applyFilters() {
+    // ─── Global Filters (overview/search) ───
+    function applyGlobalFilters() {
       const params = new URLSearchParams();
       const search = document.getElementById('searchInput').value;
       const age = document.getElementById('ageFilter').value;
@@ -768,15 +1123,26 @@
       if (city) params.set('city', city);
       window.location.search = params.toString();
     }
-    document.getElementById('searchInput')?.addEventListener('input', applyFilters);
-    document.getElementById('ageFilter')?.addEventListener('change', applyFilters);
-    document.getElementById('cityFilter')?.addEventListener('change', applyFilters);
+    document.getElementById('searchInput')?.addEventListener('input', applyGlobalFilters);
+    document.getElementById('ageFilter')?.addEventListener('change', applyGlobalFilters);
+    document.getElementById('cityFilter')?.addEventListener('change', applyGlobalFilters);
     document.getElementById('resetFilters')?.addEventListener('click', function() {
       document.getElementById('searchInput').value = '';
       document.getElementById('ageFilter').value = '';
       document.getElementById('cityFilter').value = '';
-      applyFilters();
+      applyGlobalFilters();
     });
+
+    // ─── Polling for real‑time status updates ───
+    setInterval(() => {
+      syncMainButtons();
+      const interestsSection = document.getElementById('interestsSection');
+      if (interestsSection && getComputedStyle(interestsSection).display !== 'none') {
+        loadInterests();
+      }
+      updateShortlistedCount();
+    }, 15000);
+
   })();
   </script>
 {% endblock %}
