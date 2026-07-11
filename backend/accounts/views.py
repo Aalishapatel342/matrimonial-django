@@ -90,6 +90,22 @@ def logout_view(request):
     messages.success(request, "You've been signed out. See you again soon.")
     return redirect("/login/")
 
+def _get_blocked_other_ids(db, user_oid):
+    """Return ObjectIds of users blocked by `user_oid`.
+
+    Also excludes `None` and converts to proper ObjectId if needed.
+
+
+    We store mutual documents in collection `blocks`:
+      { user_id: A, blocked_id: B }
+      { user_id: B, blocked_id: A }
+    So for filtering, we only need rows where user_id == current user.
+    """
+    blocks = db.get_collection("blocks")
+    rows = blocks.find({"user_id": user_oid}, {"blocked_id": 1}).limit(500)
+    return [r.get("blocked_id") for r in rows if r.get("blocked_id")]
+
+
 def dashboard_view(request):
     """Render dashboard.
 
@@ -148,7 +164,13 @@ def dashboard_view(request):
         elif age == "36-99":
             query["age"] = {"$gte": 36}
 
+    # Exclude blocked users from dashboard results
+    blocked_ids = _get_blocked_other_ids(users.database, me.get("_id")) if me else []
+    if blocked_ids:
+        query["_id"] = {"$nin": blocked_ids}
+
     profiles_cursor = users.find(query)
+
 
     # Render cards. Interest state is handled later by JS toggle endpoint,
     # so we just provide defaults here.
@@ -298,6 +320,22 @@ def interest_toggle_view(request, profile_id):
 
     if request.method != "POST":
         return JsonResponse({"interested": False})
+
+    user_oid = _get_request_user_object_id(request)
+    if not user_oid:
+        return JsonResponse({"interested": False})
+
+    # Block enforcement (mutual)
+    try:
+        to_oid_tmp = ObjectId(profile_id)
+    except Exception:
+        to_oid_tmp = None
+
+    users = get_users_collection()
+    db = users.database
+    if to_oid_tmp and _is_blocked_mutual(db, user_oid, to_oid_tmp):
+        return JsonResponse({"interested": False, "blocked": True})
+
 
     from_id = _get_request_user_object_id(request)
     if not from_id:
@@ -769,11 +807,134 @@ def messages_thread_view(request, partner_id):
     )
 
 
+def _is_blocked_mutual(db, user_oid, other_oid):
+    blocks = db.get_collection("blocks")
+    return bool(
+        blocks.find_one({"user_id": user_oid, "blocked_id": other_oid})
+        or blocks.find_one({"user_id": other_oid, "blocked_id": user_oid})
+    )
+
+
+def block_toggle_view(request, profile_id):
+    """Mutual block/unblock.
+
+    When A blocks B, we store two documents:
+      - {user_id: A, blocked_id: B}
+      - {user_id: B, blocked_id: A}
+
+    Calling again will unblock both sides.
+    """
+    from django.http import JsonResponse
+
+    if request.method != "POST":
+        return JsonResponse({"blocked": False})
+
+    from_id = _get_request_user_object_id(request)
+    if not from_id:
+        return JsonResponse({"blocked": False})
+
+    try:
+        other_oid = ObjectId(profile_id)
+    except Exception:
+        return JsonResponse({"blocked": False})
+
+    if other_oid == from_id:
+        return JsonResponse({"blocked": False})
+
+    users = get_users_collection()
+    db = users.database
+    blocks = db.get_collection("blocks")
+
+    # If either direction exists, treat as already blocked and unblock.
+    already_blocked = bool(
+        blocks.find_one({"user_id": from_id, "blocked_id": other_oid})
+        or blocks.find_one({"user_id": other_oid, "blocked_id": from_id})
+    )
+
+    if already_blocked:
+        blocks.delete_many({
+            "$or": [
+                {"user_id": from_id, "blocked_id": other_oid},
+                {"user_id": other_oid, "blocked_id": from_id},
+            ]
+        })
+        return JsonResponse({"blocked": False})
+
+    # Insert mutual block rows (idempotent with insert_many).
+    blocks.insert_many(
+        [
+            {"user_id": from_id, "blocked_id": other_oid, "created_at": datetime.utcnow()},
+            {"user_id": other_oid, "blocked_id": from_id, "created_at": datetime.utcnow()},
+        ]
+    )
+    return JsonResponse({"blocked": True})
+
+
+def blocked_list_view(request):
+    """Return profiles that current user has blocked (mutual rows).
+
+    Response: { profiles: [ {id, full_name, age, ...} ] }
+    """
+    from django.http import JsonResponse
+
+    if request.method != "GET":
+        return JsonResponse({"profiles": []})
+
+    user_oid = _get_request_user_object_id(request)
+    if not user_oid:
+        return JsonResponse({"profiles": []})
+
+    users = get_users_collection()
+    db = users.database
+    blocks = db.get_collection("blocks")
+
+    # We created mutual rows, so blocked people are where user_id=self and blocked_id=other.
+    rows = blocks.find({"user_id": user_oid}, {"blocked_id": 1}).limit(200)
+    other_ids = [r.get("blocked_id") for r in rows if r.get("blocked_id")]
+
+    out = []
+    for oid in other_ids:
+        p = users.find_one({"_id": oid}) or {}
+        out.append(
+            {
+                "id": str(oid),
+                "full_name": p.get("full_name", ""),
+                "age": p.get("age", ""),
+                "profession": p.get("profession", ""),
+                "city": p.get("city", ""),
+                "education": p.get("education", ""),
+                "height": p.get("height", ""),
+                "religion": p.get("religion", ""),
+                "mother_tongue": p.get("mother_tongue", ""),
+                "bio": p.get("bio", ""),
+                "verified": bool(p.get("verified", False)),
+                "compatibility": p.get("compatibility") or 70,
+            }
+        )
+
+    return JsonResponse({"profiles": out})
+
+
 def messages_send_view(request, partner_id):
     from django.http import JsonResponse
 
     if request.method != "POST":
         return JsonResponse({"ok": False})
+
+    user_oid = _get_request_user_object_id(request)
+    if not user_oid:
+        return JsonResponse({"ok": False})
+
+    try:
+        other_oid = ObjectId(partner_id)
+    except Exception:
+        return JsonResponse({"ok": False})
+
+    users = get_users_collection()
+    db = users.database
+    if _is_blocked_mutual(db, user_oid, other_oid):
+        return JsonResponse({"ok": False, "blocked": True})
+
 
     import json
 
@@ -822,6 +983,164 @@ def messages_send_view(request, partner_id):
     return JsonResponse({"ok": True})
 
 
+def api_profiles_filter_view(request):
+    """Return filtered profiles for the Matches advanced filters popup.
+
+    Frontend calls: GET /api/profiles/?religion=...&profession=...&city=...
+
+    Response shape:
+      { "profiles": [ { id, full_name, age, profession, city, education, height,
+                         religion, mother_tongue, bio, verified, compatibility,
+                         wishlisted, interested, profile_pic } ... ] }
+    """
+
+    from django.http import JsonResponse
+
+    if request.method != "GET":
+        return JsonResponse({"profiles": []})
+
+    user_oid = _get_request_user_object_id(request)
+    if not user_oid:
+        return JsonResponse({"profiles": []})
+
+    # Current user's gender (to match opposite gender)
+    users = get_users_collection()
+    me = users.find_one({"_id": user_oid}) or {}
+    my_gender = (me.get("gender") or "").lower()
+
+    if my_gender == "male":
+        target_gender = "female"
+    elif my_gender == "female":
+        target_gender = "male"
+    else:
+        target_gender = None
+
+    def get_str(name: str):
+        v = request.GET.get(name)
+        if v is None:
+            return None
+        v = v.strip()
+        return v or None
+
+    religion = get_str("religion")
+    profession = get_str("profession")
+    city = get_str("city")
+    education = get_str("education")
+    mother_tongue = get_str("mother_tongue")
+    height = get_str("height")
+
+    age_min = request.GET.get("age_min")
+    age_max = request.GET.get("age_max")
+
+    salary_min = request.GET.get("salary_min")
+    salary_max = request.GET.get("salary_max")
+
+    # Build query
+    query = {}
+
+    # Exclude blocked users from results (so Dashboard/Matches never show blocked profiles)
+    if user_oid:
+        blocked_ids = _get_blocked_other_ids(users.database, user_oid)
+        # Guard: if blocked_ids is empty or None, do nothing.
+        if blocked_ids and len(blocked_ids) > 0:
+            # Ensure types are correct for Mongo query (ObjectIds)
+            query["_id"] = {"$nin": blocked_ids}
+
+
+    if target_gender:
+        query["gender"] = target_gender
+
+    if religion:
+        query["religion"] = {"$regex": religion, "$options": "i"}
+    if profession:
+        query["profession"] = {"$regex": profession, "$options": "i"}
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    if education:
+        query["education"] = {"$regex": education, "$options": "i"}
+    if mother_tongue:
+        query["mother_tongue"] = {"$regex": mother_tongue, "$options": "i"}
+
+    # Height is stored inconsistently (string vs numeric).
+    # IMPORTANT: height values coming from UI like 5'10" are NOT floatable.
+    # Keep it regex-based unless it's a clean numeric.
+    if height:
+        h = height.strip()
+        # Treat only pure numeric strings as numeric.
+        if h.replace(".", "", 1).isdigit():
+            query["height"] = float(h)
+        else:
+            query["height"] = {"$regex": h, "$options": "i"}
+
+    # Age range (safe parsing)
+    try:
+        if age_min:
+            query.setdefault("age", {})
+            query["age"]["$gte"] = int(age_min)
+        if age_max:
+            query.setdefault("age", {})
+            query["age"]["$lte"] = int(age_max)
+    except Exception:
+        # ignore age filter parse issues
+        pass
+
+    # Salary range (safe parsing)
+    salary_min_i = None
+    salary_max_i = None
+    try:
+        if salary_min:
+            salary_min_i = int(salary_min)
+        if salary_max:
+            salary_max_i = int(salary_max)
+    except Exception:
+        salary_min_i = None
+        salary_max_i = None
+
+    if salary_min_i is not None or salary_max_i is not None:
+        salary_range = {}
+        if salary_min_i is not None:
+            salary_range["$gte"] = salary_min_i
+        if salary_max_i is not None:
+            salary_range["$lte"] = salary_max_i
+
+        # Match either field.
+        query["$or"] = [
+            {"annual_salary": salary_range},
+            {"salary": salary_range},
+            {"annualIncome": salary_range},
+        ]
+
+
+    # Fetch results
+    pinned = users.database.get_collection("pinned")
+    wishlist = users.database.get_collection("wishlist")
+
+    # Compute wishlisted set for this user
+    wish_ids = wishlist.find({"user_id": user_oid}, {"profile_id": 1}).limit(200)
+    wish_set = {w.get("profile_id") for w in wish_ids if w.get("profile_id")}
+
+    # Use a conservative limit for performance
+    cursor = users.find(query).limit(50)
+
+    from .api_profiles import add_profile_fields
+
+    profiles = []
+    for p in cursor:
+        profile_id = p.get("_id")
+        if not profile_id:
+            continue
+
+        profiles.append(
+            {
+                **add_profile_fields(p),
+                "wishlisted": bool(profile_id in wish_set),
+                "interested": False,
+            }
+        )
+
+    return JsonResponse({"profiles": profiles})
+
+
 def debug_session_view(request):
 
 
@@ -840,5 +1159,6 @@ def debug_session_view(request):
             "full_name": request.session.get("full_name"),
         }
     )
+
 
 

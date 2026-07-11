@@ -43,11 +43,19 @@ urlpatterns = [
     path("wishlist/count/", views.wishlist_count_view, name="wishlist_count"),
     path("wishlist/", views.wishlist_list_view, name="wishlist_list"),
 
+    # Profiles filtering for Matches popup
+    path("profiles/", views.api_profiles_filter_view, name="api_profiles"),
+
     # Conversations + messages
     path("conversations/", views.conversations_view, name="conversations"),
     path("messages/<str:partner_id>/", views.messages_thread_view, name="messages_thread"),
     path("messages/send/<str:partner_id>/", views.messages_send_view, name="messages_send"),
+
+    # Blocking (mutual)
+    path("block/toggle/<str:profile_id>/", views.block_toggle_view, name="block_toggle"),
+    path("blocked/", views.blocked_list_view, name="blocked_list"),
 ]
+
 
 
 
