@@ -770,7 +770,9 @@ def conversations_view(request):
 
 
 def messages_thread_view(request, partner_id):
+
     from django.http import JsonResponse
+
 
     if request.method != "GET":
         return JsonResponse({"messages": []})
@@ -785,8 +787,20 @@ def messages_thread_view(request, partner_id):
 
     partner_oid = ObjectId(partner_id)
 
+    # If users are blocked, return a blocked flag so UI can show a notice.
+    if _is_blocked_mutual(db, user_oid, partner_oid):
+        partner = users.find_one({"_id": partner_oid}) or {}
+        return JsonResponse(
+            {
+                "partner_full_name": partner.get("full_name", ""),
+                "blocked": True,
+                "messages": [],
+            }
+        )
+
     partner = users.find_one({"_id": partner_oid}) or {}
     msgs = messages_col.find(
+
         {
             "$or": [
                 {"sender_id": user_oid, "receiver_id": partner_oid},

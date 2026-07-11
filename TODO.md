@@ -1,15 +1,14 @@
-# TODO
-
-- [x] Implement backend connection status endpoint
-  - [ ] Add `connection_status_view` in `backend/accounts/views.py`
-  - [ ] Register route in `backend/accounts/api_urls.py`
-
-- [x] Update dashboard frontend to sync main grid buttons after notification Accept/Decline
-  - [x] Add `syncMainButtons()` in `frontend/templates/dashboard.html`
-  - [x] Call it after `/interest/accept/.../` and `/interest/decline/.../`
-
-
-- [ ] Manual testing checklist
-  - [ ] Click Accept in Notifications; verify main grid shows “Connected” + pinned grid updates
-  - [ ] Click Reject in Notifications; verify pinned grid unchanged + main button state correct
-
+- [ ] Implement block backend: add collection usage + endpoints
+  - [ ] POST /block/toggle/<profile_id>/
+  - [ ] GET /blocked/
+  - [ ] Update interest_toggle_view and messages_send_view to return blocked state
+  - [ ] Update connection_status_view to return state=blocked
+- [ ] Update frontend UI
+  - [ ] Add “Blocked” section + navbar item + count badge
+  - [ ] Add “Block” button inside chat popup modal
+  - [ ] Hide blocked profiles from Matches/overview and show them only in blocked list
+  - [ ] Update profile modal to show “Blocked” badge and block actions
+  - [ ] Update JS: disable interest/message + show toast when blocked
+- [ ] Sanity checks
+  - [ ] Run compileall
+  - [ ] Manual browser test: block -> blocked list shows, matched profiles hidden, message/interest blocked

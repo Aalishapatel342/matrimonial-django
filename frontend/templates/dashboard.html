@@ -21,11 +21,12 @@
         <span class="nav-logo__text">VIVAH</span>
       </div>
     </div>
-    <nav class="nav-center">
+      <nav class="nav-center">
       <a href="#" class="nav-link active" data-section="overview">Dashboard</a>
       <a href="#" class="nav-link" data-section="search">Search</a>
       <a href="#" class="nav-link" data-section="matches">Matches</a>
       <a href="#" class="nav-link" data-section="interests">Interests</a>
+      <a href="#" class="nav-link" data-section="blocked">Blocked</a>
     </nav>
     <div class="nav-right">
       <button class="icon-action" id="themeToggle" aria-label="Toggle theme">
@@ -140,6 +141,68 @@
     </div>
   </div>
 
+  <!-- ─── MATCHES FILTER POPUP MODAL ─── -->
+  <div class="modal-overlay" id="matchesModal">
+    <div class="modal-card" style="max-width:600px; max-height:85vh; display:flex; flex-direction:column;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
+        <h3 style="font-family:var(--font-d); font-size:1.3rem; margin:0;">Find Your Match</h3>
+        <button class="modal-close" id="matchesModalClose">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div style="flex:1; overflow-y:auto; padding-right:4px;">
+        <form id="matchesFilterForm" class="matches-filter-form">
+          <div class="filter-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="filter-group">
+              <label for="mReligion">Religion</label>
+              <input type="text" id="mReligion" name="religion" placeholder="e.g. Hindu" />
+            </div>
+            <div class="filter-group">
+              <label for="mProfession">Profession</label>
+              <input type="text" id="mProfession" name="profession" placeholder="e.g. Engineer" />
+            </div>
+            <div class="filter-group">
+              <label for="mCity">City</label>
+              <input type="text" id="mCity" name="city" placeholder="e.g. Mumbai" />
+            </div>
+            <div class="filter-group">
+              <label for="mEducation">Education</label>
+              <input type="text" id="mEducation" name="education" placeholder="e.g. B.Tech" />
+            </div>
+            <div class="filter-group">
+              <label for="mMotherTongue">Mother Tongue</label>
+              <input type="text" id="mMotherTongue" name="mother_tongue" placeholder="e.g. Hindi" />
+            </div>
+            <div class="filter-group">
+              <label for="mHeight">Height</label>
+              <input type="text" id="mHeight" name="height" placeholder="e.g. 5'10\"" />
+            </div>
+            <div class="filter-group filter-range" style="grid-column: span 2;">
+              <label>Age Range</label>
+              <div class="range-inputs" style="display:flex; gap:8px; align-items:center;">
+                <input type="number" id="mAgeMin" name="age_min" placeholder="Min" min="18" style="flex:1;" />
+                <span>–</span>
+                <input type="number" id="mAgeMax" name="age_max" placeholder="Max" min="18" style="flex:1;" />
+              </div>
+            </div>
+            <div class="filter-group filter-range" style="grid-column: span 2;">
+              <label>Annual Salary (₹)</label>
+              <div class="range-inputs" style="display:flex; gap:8px; align-items:center;">
+                <input type="number" id="mSalaryMin" name="salary_min" placeholder="Min" min="0" step="10000" style="flex:1;" />
+                <span>–</span>
+                <input type="number" id="mSalaryMax" name="salary_max" placeholder="Max" min="0" step="10000" style="flex:1;" />
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; margin-top:20px; justify-content:flex-end;">
+            <button type="reset" class="filter-reset" id="resetMatchesFilters">Clear</button>
+            <button type="submit" class="btn-primary">Apply Filters</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- APP SHELL -->
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
@@ -228,67 +291,6 @@
         <button class="filter-reset" id="resetFilters">Reset</button>
       </div>
 
-      <!-- ─── MATCHES SECTION with advanced filter form ─── -->
-      <section class="matches-section" id="matchesSection" style="display:none;">
-        <div class="pinned-header">
-          <div>
-            <div class="pinned-title">Find Your Match</div>
-            <div class="pinned-subtitle">Refine your search with detailed criteria</div>
-          </div>
-        </div>
-        <form id="matchesFilterForm" class="matches-filter-form">
-          <div class="filter-grid">
-            <div class="filter-group">
-              <label for="mReligion">Religion</label>
-              <input type="text" id="mReligion" name="religion" placeholder="e.g. Hindu, Muslim" />
-            </div>
-            <div class="filter-group">
-              <label for="mProfession">Profession</label>
-              <input type="text" id="mProfession" name="profession" placeholder="e.g. Engineer, Doctor" />
-            </div>
-            <div class="filter-group">
-              <label for="mCity">City</label>
-              <input type="text" id="mCity" name="city" placeholder="e.g. Mumbai, Delhi" />
-            </div>
-            <div class="filter-group">
-              <label for="mEducation">Education</label>
-              <input type="text" id="mEducation" name="education" placeholder="e.g. B.Tech, MBA" />
-            </div>
-            <div class="filter-group">
-              <label for="mMotherTongue">Mother Tongue</label>
-              <input type="text" id="mMotherTongue" name="mother_tongue" placeholder="e.g. Hindi, Tamil" />
-            </div>
-            <div class="filter-group">
-              <label for="mHeight">Height</label>
-              <input type="text" id="mHeight" name="height" placeholder="e.g. 5'10\"" />
-            </div>
-            <div class="filter-group filter-range">
-              <label>Age Range</label>
-              <div class="range-inputs">
-                <input type="number" id="mAgeMin" name="age_min" placeholder="Min" min="18" />
-                <span>–</span>
-                <input type="number" id="mAgeMax" name="age_max" placeholder="Max" min="18" />
-              </div>
-            </div>
-            <div class="filter-group filter-range">
-              <label>Salary (Annual)</label>
-              <div class="range-inputs">
-                <input type="number" id="mSalaryMin" name="salary_min" placeholder="Min" min="0" step="10000" />
-                <span>–</span>
-                <input type="number" id="mSalaryMax" name="salary_max" placeholder="Max" min="0" step="10000" />
-              </div>
-            </div>
-          </div>
-          <div class="filter-actions">
-            <button type="submit" class="btn-primary">Apply Filters</button>
-            <button type="reset" class="filter-reset" id="resetMatchesFilters">Clear All</button>
-          </div>
-        </form>
-        <div class="matches-results">
-          <div class="profile-grid" id="matchesGrid"></div>
-        </div>
-      </section>
-
       <!-- Interests section -->
       <section class="interests-section" id="interestsSection" style="display:none;">
         <div class="pinned-header">
@@ -323,7 +325,7 @@
         </div>
       </section>
 
-      <!-- Main Profile Grid (overview, search, etc.) -->
+      <!-- Main Profile Grid (overview, search, matches results) -->
       <div class="profile-grid" id="profileGrid">
         {% for profile in profiles %}
           <div class="profile-card" data-id="{{ profile.id }}" data-wishlisted="{% if profile.wishlisted %}true{% else %}false{% endif %}">
@@ -350,6 +352,7 @@
             </div>
             <div class="pc-actions">
               <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="{{ profile.id }}" title="Add to shortlist">
+
                 <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="{% if profile.wishlisted %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
@@ -361,6 +364,13 @@
                 {% else %}
                   Send Interest
                 {% endif %}
+              </button>
+              <button class="pc-btn block-btn" type="button" data-action="block" data-id="{{ profile.id }}" title="Block this person">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5a1 1 0 0 1 1 1v1"/>
+                  <path d="M12 21l-8-8 8-8 8 8-8 8z"/>
+                  <line x1="7" y1="7" x2="17" y2="17"/>
+                </svg>
               </button>
             </div>
           </div>
@@ -619,6 +629,17 @@
         nameEl.textContent = data.partner_full_name || 'Chat';
         msgsEl.innerHTML = '';
 
+        // If server indicates user is blocked, show the professional notice.
+        if (data.blocked === true) {
+          msgsEl.innerHTML = `
+            <div style="text-align:center;padding:20px 12px;color:var(--text-2);">
+              <div style="font-weight:700;color:var(--maroon);margin-bottom:6px;">Message blocked</div>
+              <div>You can’t send messages to this user because they have blocked you.</div>
+            </div>
+          `;
+          return;
+        }
+
         (data.messages || []).forEach(m => {
           const mine = (m.sender_id && m.sender_id === (window.USER_ID || document.body.dataset.userId));
           const align = mine ? 'flex-end' : 'flex-start';
@@ -635,6 +656,7 @@
         msgsEl.scrollTop = msgsEl.scrollHeight;
       } catch (e) { /* swallow */ }
     }
+
 
     async function sendPopupMessage() {
       const partnerId = currentChatPartnerId;
@@ -880,6 +902,63 @@
       } catch (e) { /* ignore */ }
     }
 
+    // ─── Load blocked profiles ───
+    async function loadBlocked() {
+      try {
+        const res = await fetch('/blocked/', { method: 'GET' });
+        const data = await res.json();
+        const grid = document.getElementById('profileGrid');
+        if (!grid) return;
+
+        const profiles = data.profiles || [];
+        if (profiles.length === 0) {
+          grid.innerHTML = `
+            <div class="empty-state" style="padding:40px 0;">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2l9 4-9 4-9-4 9-4z"/><path d="M3 8v8l9 4 9-4V8"/></svg>
+              <h3>No blocked profiles</h3>
+              <p>When you block someone, their profile will appear here.</p>
+            </div>
+          `;
+          return;
+        }
+
+        grid.innerHTML = profiles.map(p => {
+          return `
+            <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="false">
+              <div class="pc-head">
+                <div class="avatar-lg" style="background:var(--maroon-tint);color:var(--maroon-dark);">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
+                <div>
+                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')}</div>
+                  <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+                </div>
+              </div>
+              <div class="pc-tags">
+                <span class="pc-tag">${escHtml(p.religion || '')}</span>
+                <span class="pc-tag">${escHtml(p.height || '')}</span>
+                <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
+              </div>
+              <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
+              <div class="pc-match">
+                <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility || 70)}%</span></div>
+                <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility || 70)}%;"></div></div>
+              </div>
+              <div class="pc-actions">
+                <button class="pc-btn view" type="button" data-action="view" data-id="${escHtml(p.id)}">View</button>
+                <button class="pc-btn block-btn" type="button" data-action="block" data-id="${escHtml(p.id)}" title="Unblock">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 6l12 12"/>
+                    <path d="M18 6L6 18"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        showToast('Error loading blocked profiles', 'error');
+      }
+    }
+
     // ─── Load interests ───
     async function loadInterests() {
       try {
@@ -933,7 +1012,17 @@
       } catch (e) { /* ignore */ }
     }
 
-    // ─── Matches advanced filter ───
+    // ─── Matches advanced filter (popup) ───
+    // Open matches modal
+    function openMatchesModal() {
+      document.getElementById('matchesModal').classList.add('open');
+    }
+
+    function closeMatchesModal() {
+      document.getElementById('matchesModal').classList.remove('open');
+    }
+
+    // Apply filters and update main profile grid
     async function applyMatchesFilters(formData) {
       const params = new URLSearchParams();
       for (const [key, value] of formData.entries()) {
@@ -942,10 +1031,11 @@
       try {
         const res = await fetch(`/api/profiles/?${params.toString()}`);
         const data = await res.json();
-        const grid = document.getElementById('matchesGrid');
+        const grid = document.getElementById('profileGrid');
         if (!grid) return;
 
         const profiles = data.profiles || [];
+        // Update the grid
         if (profiles.length === 0) {
           grid.innerHTML = `
             <div class="empty-state" style="padding:40px 0;">
@@ -954,88 +1044,96 @@
               <p>Try adjusting your filters.</p>
             </div>
           `;
-          return;
-        }
-
-        grid.innerHTML = profiles.map(p => {
-          const verified = p.verified ? `
-            <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
-          ` : '';
-          return `
-            <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}">
-              <div class="pc-head">
-                <div class="avatar-lg" style="${p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
-                <div>
-                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
-                  <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+        } else {
+          grid.innerHTML = profiles.map(p => {
+            const verified = p.verified ? `
+              <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
+            ` : '';
+            return `
+              <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}">
+                <div class="pc-head">
+                  <div class="avatar-lg" style="${p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
+                  <div>
+                    <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
+                    <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+                  </div>
+                </div>
+                <div class="pc-tags">
+                  <span class="pc-tag">${escHtml(p.religion || '')}</span>
+                  <span class="pc-tag">${escHtml(p.height || '')}</span>
+                  <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
+                </div>
+                <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
+                <div class="pc-match">
+                  <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
+                  <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
+                </div>
+                <div class="pc-actions">
+                  <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist">
+                    <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  </button>
+                  <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}">View</button>
+                  <button class="pc-btn interest${p.interested ? ' sent' : ''}" data-action="interest" data-id="${escHtml(p.id)}">
+                    ${p.interested ? 'Interest Sent' : 'Send Interest'}
+                  </button>
                 </div>
               </div>
-              <div class="pc-tags">
-                <span class="pc-tag">${escHtml(p.religion || '')}</span>
-                <span class="pc-tag">${escHtml(p.height || '')}</span>
-                <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
-              </div>
-              <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
-              <div class="pc-match">
-                <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
-                <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
-              </div>
-              <div class="pc-actions">
-                <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist">
-                  <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                  </svg>
-                </button>
-                <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}">View</button>
-                <button class="pc-btn interest${p.interested ? ' sent' : ''}" data-action="interest" data-id="${escHtml(p.id)}">
-                  ${p.interested ? 'Interest Sent' : 'Send Interest'}
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('');
+            `;
+          }).join('');
+        }
 
         // Update match count
         document.getElementById('matchesCount').textContent = profiles.length;
+        document.getElementById('totalMatches').textContent = profiles.length;
+
+        // Close the modal
+        closeMatchesModal();
+        // Ensure we show the main grid (overview) after applying filters
+        // We'll switch to overview section if not already there
+        const overviewLink = document.querySelector('[data-section="overview"]');
+        if (overviewLink) {
+          document.querySelectorAll('[data-section]').forEach(x => x.classList.remove('active'));
+          overviewLink.classList.add('active');
+        }
+        // Hide other sections and show profile grid
+        showSection('overview');
       } catch (e) {
         showToast('Error fetching matches', 'error');
       }
     }
 
-    // ─── Section switching ───
+    // ─── Section switching (handles visibility) ───
     function showSection(section) {
       const interestsSection = document.getElementById('interestsSection');
       const shortlistedSection = document.getElementById('shortlistedSection');
-      const matchesSection = document.getElementById('matchesSection');
       const profileGrid = document.getElementById('profileGrid');
       const globalFilter = document.getElementById('globalFilterBar');
-      const main = profileGrid?.closest('.main-content');
 
-      // Hide all sections
+      // Hide all special sections
       if (interestsSection) interestsSection.style.display = 'none';
       if (shortlistedSection) shortlistedSection.style.display = 'none';
-      if (matchesSection) matchesSection.style.display = 'none';
-      if (profileGrid) profileGrid.style.display = 'none';
-      if (globalFilter) globalFilter.style.display = 'none';
-
-      // Show selected
+      // Show profile grid and global filter by default, except for interests and shortlisted
       if (section === 'interests') {
         if (interestsSection) interestsSection.style.display = 'block';
+        if (profileGrid) profileGrid.style.display = 'none';
         if (globalFilter) globalFilter.style.display = 'flex';
         loadInterests();
       } else if (section === 'shortlisted') {
         if (shortlistedSection) shortlistedSection.style.display = 'block';
+        if (profileGrid) profileGrid.style.display = 'none';
+        if (globalFilter) globalFilter.style.display = 'none';
         loadShortlisted();
-      } else if (section === 'matches') {
-        if (matchesSection) matchesSection.style.display = 'block';
-        // Optionally auto-apply empty filters to show all?
-        // We'll let the user submit the form.
-        // But we can load initial results with no filters (show all)
-        const form = document.getElementById('matchesFilterForm');
-        const formData = new FormData(form);
-        applyMatchesFilters(formData);
+      } else if (section === 'blocked') {
+        // Show blocked profiles using the same profile grid
+        if (interestsSection) interestsSection.style.display = 'none';
+        if (shortlistedSection) shortlistedSection.style.display = 'none';
+        if (profileGrid) profileGrid.style.display = 'grid';
+        if (globalFilter) globalFilter.style.display = 'none';
+        loadBlocked();
       } else {
-        // Default: show main profile grid (overview, search, etc.)
+        // overview, search, matches (after filter applied)
         if (profileGrid) profileGrid.style.display = 'grid';
         if (globalFilter) globalFilter.style.display = 'flex';
       }
@@ -1048,33 +1146,66 @@
         const section = a.dataset.section;
         document.querySelectorAll('[data-section]').forEach(x => x.classList.remove('active'));
         a.classList.add('active');
+
+        if (section === 'matches') {
+          // Open the matches filter modal instead of switching to a section
+          openMatchesModal();
+          // But we also want to keep the "Matches" link active
+          return;
+        }
+
+        // Force a full reload when going back to Dashboard/overview,
+        // so it re-renders from the server (excluding blocked users).
+        if (section === 'overview') {
+          window.location.reload();
+          return;
+        }
+
         showSection(section);
       });
     });
 
-    // ─── Matches filter form submit ───
+    // ─── Matches modal events ───
+    document.getElementById('matchesModalClose')?.addEventListener('click', closeMatchesModal);
+    document.getElementById('matchesModal')?.addEventListener('click', function(e) {
+      if (e.target === this) closeMatchesModal();
+    });
+
+    // Form submit
     document.getElementById('matchesFilterForm')?.addEventListener('submit', function(e) {
       e.preventDefault();
       const formData = new FormData(this);
-      applyMatchesFilters(formData);
+
+      // If all fields are empty, treat as "no filters" and show all profiles.
+      // (Prevents server errors / blank query issues.)
+      let hasAnyValue = false;
+      for (const [k, v] of formData.entries()) {
+        if (String(v).trim()) {
+          hasAnyValue = true;
+          break;
+        }
+      }
+      applyMatchesFilters(hasAnyValue ? formData : new FormData());
     });
 
-    // Reset matches filters
+    // Reset form (clear all fields)
     document.getElementById('resetMatchesFilters')?.addEventListener('click', function() {
       const form = document.getElementById('matchesFilterForm');
       form.reset();
+      // Optionally re-apply empty filters to show all
       const formData = new FormData(form);
       applyMatchesFilters(formData);
     });
 
-    // Initial count for matches (total profiles)
+    // Initial count for matches
     document.getElementById('matchesCount').textContent = "{{ profiles|length }}";
+    document.getElementById('totalMatches').textContent = "{{ profiles|length }}";
 
     // Initial sync for shortlisted
     updateShortlistedCount();
     syncMainButtons();
 
-    // ─── Event Delegation: Wishlist, View, Interest (works for both main grid and matches grid) ───
+    // ─── Event Delegation: Wishlist, View, Interest (works for both main grid and any dynamic content) ───
     document.addEventListener('click', function(e) {
       // Wishlist button
       const wishBtn = e.target.closest('[data-action="wishlist"]');
@@ -1109,6 +1240,32 @@
             showToast(newState ? 'Interest sent!' : 'Interest withdrawn.', newState ? 'success' : '');
           });
         }
+      }
+
+      // Block button
+      const blockBtn = e.target.closest('[data-action="block"]');
+      if (blockBtn) {
+        e.preventDefault();
+        const profileId = blockBtn.dataset.id;
+        if (!profileId) return;
+        (async () => {
+          try {
+            const res = await fetch(`/block/toggle/${profileId}/`, {
+              method: 'POST',
+              headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+              body: JSON.stringify({}),
+            });
+            const data = await res.json();
+            showToast(data.blocked ? 'User blocked' : 'User unblocked', data.blocked ? 'success' : '');
+            // Keep other cards visible; just remove the blocked profile from the main grid.
+            // (If this is being used inside other grids, we only remove from the card's grid.)
+            blockBtn.closest('.profile-card')?.remove();
+            // Also resync button states so the UI remains consistent.
+            syncMainButtons();
+          } catch (err) {
+            showToast('Error blocking user', 'error');
+          }
+        })();
       }
     });
 
@@ -1151,3 +1308,4 @@
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 {% endblock %}
+
