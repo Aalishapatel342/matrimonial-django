@@ -24,9 +24,6 @@
           <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">
             {% if user.gender == 'male' %}Groom{% elif user.gender == 'female' %}Bride{% else %}Member{% endif %}
           </span>
-          <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">
-            {{ user.age|default:"Age not set" }}
-          </span>
         </div>
         <div style="margin-top: 30px; font-size: 0.85rem; color: rgba(255,255,255,0.6);">
           <p>Complete your profile to get better matches.</p>
@@ -115,9 +112,11 @@
           <div class="field" style="margin-bottom: 14px;">
             <label for="profile_pic">Profile Picture</label>
             <input type="file" id="profile_pic" name="profile_pic" accept="image/*" style="width:100%;">
-            <div style="margin-top:8px; color: var(--text-2); font-size: 0.85rem;">
-              <span>Upload a clear photo (stored in MongoDB).</span>
-            </div>
+            {% if user.profile_pic %}
+              <div style="margin-top: 8px;">
+                <img src="{{ user.profile_pic.url }}" alt="Current Profile Picture" style="max-width: 120px; border-radius: 8px; border: 1px solid var(--border);">
+              </div>
+            {% endif %}
           </div>
 
           <div class="field">

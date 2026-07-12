@@ -54,12 +54,17 @@
 
       <div class="nav-profile" id="profileDropdownBtn">
         {% if full_name %}
-          <div class="nav-avatar" style="{{ full_name|avatar_style }}; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:16px;">
-            {{ full_name|initials }}
+          <div class="nav-avatar" style="{{ full_name|avatar_style }}; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:16px; overflow:hidden;">
+            {% if request.session.profile_pic %}
+              <img src="{{ request.session.profile_pic }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;display:block;" />
+            {% else %}
+              {{ full_name|initials }}
+            {% endif %}
           </div>
         {% else %}
           <div class="nav-avatar" style="background:var(--maroon);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">U</div>
         {% endif %}
+
         <div class="nav-profile__info">
           <span class="nav-profile__name">{{ full_name|truncatechars:12 }}</span>
           <span class="nav-profile__plan">Premium</span>
@@ -68,14 +73,19 @@
 
         <div class="profile-dropdown" id="profileDropdown">
           <div class="profile-dropdown__header">
-            <div class="nav-avatar" style="{{ full_name|avatar_style }}; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; width:40px; height:40px;">
-              {{ full_name|initials }}
+            <div class="nav-avatar" style="{{ full_name|avatar_style }}; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:18px; width:40px; height:40px; overflow:hidden;">
+              {% if request.session.profile_pic %}
+                <img src="{{ request.session.profile_pic }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;display:block;" />
+              {% else %}
+                {{ full_name|initials }}
+              {% endif %}
             </div>
             <div>
               <strong>{{ full_name }}</strong>
               <span>{{ request.session.email|default:"" }}</span>
             </div>
           </div>
+
           <hr class="dropdown-divider" />
           <a href="{% url 'edit_profile_root' %}" class="dropdown-item">My Profile</a>
           <a href="#" class="dropdown-item">Subscription</a>
@@ -198,9 +208,13 @@
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-profile">
-        <div class="sidebar-profile__photo-wrap">
-          <div class="sidebar-profile__photo" style="{{ full_name|avatar_style }}; display:flex; align-items:center; justify-content:center; color:#fff; font-size:28px; font-weight:700;">
-            {{ full_name|initials }}
+          <div class="sidebar-profile__photo-wrap">
+          <div class="sidebar-profile__photo" style="{{ full_name|avatar_style }}; display:flex; align-items:center; justify-content:center; color:#fff; font-size:28px; font-weight:700; overflow:hidden;">
+            {% if request.session.profile_pic %}
+              <img src="{{ request.session.profile_pic }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;display:block;" />
+            {% else %}
+              {{ full_name|initials }}
+            {% endif %}
           </div>
           <span class="online-ring"></span>
         </div>
@@ -212,10 +226,10 @@
         <div class="completion-bar">
           <div class="completion-bar__label">
             <span>Profile Complete</span>
-            <span class="completion-bar__pct">78%</span>
+            <span class="completion-bar__pct">{{ profile_completion_pct }}%</span>
           </div>
           <div class="completion-bar__track">
-            <div class="completion-bar__fill" style="width:78%"></div>
+            <div class="completion-bar__fill" style="width:{{ profile_completion_pct }}%"></div>
           </div>
         </div>
       </div>
@@ -304,7 +318,7 @@
         {% for profile in profiles %}
           <div class="profile-card" data-id="{{ profile.id }}" data-wishlisted="{% if profile.wishlisted %}true{% else %}false{% endif %}">
             <div class="pc-head">
-              <div class="avatar-lg" style="{{ profile.full_name|avatar_style }}">{{ profile.full_name|initials }}</div>
+              <div class="avatar-lg" style="{{ profile.full_name|avatar_style }}">{% if profile.profile_pic %}<img src="{{ profile.profile_pic }}" alt="{{ profile.full_name }}" style="width:100%;height:100%;border-radius:16px;object-fit:cover;display:block;" />{% else %}{{ profile.full_name|initials }}{% endif %}</div>
               <div>
                 <div class="pc-head-name">{{ profile.full_name }}, {{ profile.age }}
                   {% if profile.verified %}
