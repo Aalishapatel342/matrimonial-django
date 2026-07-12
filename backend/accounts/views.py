@@ -146,6 +146,7 @@ def logout_view(request):
     return redirect("/login/")
 
 def _get_blocked_other_ids(db, user_oid):
+
     """Return ObjectIds of users blocked by `user_oid`.
 
     Also excludes `None` and converts to proper ObjectId if needed.
@@ -161,17 +162,61 @@ def _get_blocked_other_ids(db, user_oid):
     return [r.get("blocked_id") for r in rows if r.get("blocked_id")]
 
 
-def dashboard_view(request):
-    """Render dashboard.
+def _profile_completion_percent(profile_doc: dict) -> int:
+    """Compute profile completion % based on filled profile fields.
 
-    The template is mostly driven by JS + a few server-side context values
-    (gender + initial profiles list + filters).
-
-    Frontend expects:
-      - user_gender
-      - profiles (list of profile dicts)
-      - cities, search, age, city
+    Deterministic: no random values.
     """
+
+    if not profile_doc:
+        return 0
+
+    # Fields present on the edit form / user payload.
+    # If later you add more fields, update this list.
+    fields = [
+        "full_name",
+        "dob",
+        "profession",
+        "city",
+        "education",
+        "height",
+        "annual_salary",
+        "religion",
+        "mother_tongue",
+        "bio",
+        "profile_pic_is_profile_pic",
+    ]
+
+    total = len(fields)
+    if total <= 0:
+        return 0
+
+    def is_filled(v) -> bool:
+        if v is None:
+            return False
+        if isinstance(v, bool):
+            return v
+        s = str(v).strip()
+        return bool(s)
+
+    filled = 0
+    for f in fields:
+        if f in profile_doc and is_filled(profile_doc.get(f)):
+            filled += 1
+
+    pct = round((filled / total) * 100)
+    if pct < 0:
+        pct = 0
+    if pct > 100:
+        pct = 100
+    return int(pct)
+
+
+def dashboard_view(request):
+    """Render the dashboard."""
+
+    # (gender + initial profiles list + filters).
+
     if not request.session.get("user_id"):
         messages.error(request, "Please sign in to continue.")
         return redirect("login")
@@ -183,6 +228,8 @@ def dashboard_view(request):
 
     users = get_users_collection()
     me = users.find_one({"_id": ObjectId(user_id)})
+    profile_completion_pct = _profile_completion_percent(me)
+
 
     # user_gender is used in template conditional to show opposite profiles
     user_gender = (me.get("gender") if me else None) or request.session.get("gender") or ""
@@ -266,6 +313,7 @@ def dashboard_view(request):
             "age": age,
             "city": city,
             "cities": cities,
+            "profile_completion_pct": profile_completion_pct,
         },
     )
 
@@ -369,9 +417,20 @@ def edit_profile_view(request):
 
         # Refresh session values used in templates
         request.session["full_name"] = payload.get("full_name") or request.session.get("full_name")
+
+        # Keep a data URL of the profile picture in session so templates can render it everywhere.
+        pic = payload.get("profile_pic")
+        pic_ct = payload.get("profile_pic_content_type")
+        if pic and pic_ct and payload.get("profile_pic_is_profile_pic"):
+            request.session["profile_pic"] = "data:" + pic_ct + ";base64," + pic
+        elif "profile_pic" in payload:
+            # Uploaded empty/invalid => clear
+            request.session["profile_pic"] = ""
+
         for key in ["dob","profession","city","education","height","religion","mother_tongue","bio","annual_salary"]:
             if key in payload:
                 request.session[key] = payload[key]
+
 
         messages.success(request, "Profile update saved.")
         return redirect("dashboard")
