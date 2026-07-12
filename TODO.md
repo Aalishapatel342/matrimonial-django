@@ -1,14 +1,5 @@
-- [ ] Implement block backend: add collection usage + endpoints
-  - [ ] POST /block/toggle/<profile_id>/
-  - [ ] GET /blocked/
-  - [ ] Update interest_toggle_view and messages_send_view to return blocked state
-  - [ ] Update connection_status_view to return state=blocked
-- [ ] Update frontend UI
-  - [ ] Add “Blocked” section + navbar item + count badge
-  - [ ] Add “Block” button inside chat popup modal
-  - [ ] Hide blocked profiles from Matches/overview and show them only in blocked list
-  - [ ] Update profile modal to show “Blocked” badge and block actions
-  - [ ] Update JS: disable interest/message + show toast when blocked
-- [ ] Sanity checks
-  - [ ] Run compileall
-  - [ ] Manual browser test: block -> blocked list shows, matched profiles hidden, message/interest blocked
+# TODO
+- [x] Reorder conflicting URL patterns in `backend/accounts/api_urls.py` so `messages/unread-count/` is not captured by `messages/<str:partner_id>/`.
+
+
+

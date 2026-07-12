@@ -246,6 +246,7 @@ def edit_profile_view(request):
         "city": request.session.get("city", ""),
         "education": request.session.get("education", ""),
         "height": request.session.get("height", ""),
+        "annual_salary": request.session.get("annual_salary", ""),
         "religion": request.session.get("religion", ""),
         "mother_tongue": request.session.get("mother_tongue", ""),
         "bio": request.session.get("bio", ""),
@@ -253,9 +254,49 @@ def edit_profile_view(request):
     }
 
     if request.method == "POST":
-        # Placeholder: validate + persist to MongoDB can be implemented later.
-        # For now, just redirect back to dashboard to keep UX working.
-        messages.success(request, "Profile update saved (demo).")
+        users = get_users_collection()
+        user_oid = _get_request_user_object_id(request)
+        if not user_oid:
+            messages.error(request, "Session expired. Please sign in again.")
+            return redirect("login")
+
+        payload = {
+            "full_name": (request.POST.get("full_name") or "").strip(),
+            "dob": request.POST.get("dob") or None,
+            "profession": (request.POST.get("profession") or "").strip(),
+            "city": (request.POST.get("city") or "").strip(),
+            "education": (request.POST.get("education") or "").strip(),
+            "height": (request.POST.get("height") or "").strip(),
+            "religion": (request.POST.get("religion") or "").strip(),
+            "mother_tongue": (request.POST.get("mother_tongue") or "").strip(),
+            "bio": (request.POST.get("bio") or "").strip(),
+        }
+
+        # Optional salary field (annual_salary)
+        raw = (request.POST.get("annual_salary") or "").strip()
+        if raw != "":
+            try:
+                payload["annual_salary"] = int(raw)
+            except ValueError:
+                pass
+
+        # Handle profile picture (stored in MongoDB as base64)
+        f = request.FILES.get("profile_pic")
+        if f:
+            import base64
+            payload["profile_pic"] = base64.b64encode(f.read()).decode("utf-8")
+            payload["profile_pic_content_type"] = getattr(f, "content_type", "application/octet-stream")
+            payload["profile_pic_is_profile_pic"] = True
+
+        users.update_one({"_id": user_oid}, {"$set": payload}, upsert=False)
+
+        # Refresh session values used in templates
+        request.session["full_name"] = payload.get("full_name") or request.session.get("full_name")
+        for key in ["dob","profession","city","education","height","religion","mother_tongue","bio","annual_salary"]:
+            if key in payload:
+                request.session[key] = payload[key]
+
+        messages.success(request, "Profile update saved.")
         return redirect("dashboard")
 
     return render(request, "edit_profile.html", {"user": user})
@@ -771,6 +812,7 @@ def conversations_view(request):
 
 def messages_thread_view(request, partner_id):
 
+
     from django.http import JsonResponse
 
 
@@ -881,7 +923,20 @@ def block_toggle_view(request, profile_id):
             {"user_id": other_oid, "blocked_id": from_id, "created_at": datetime.utcnow()},
         ]
     )
+
+    # If these users were connected before blocking, remove the pinned connection
+    # so Blocked users disappear from Connected/Interests.
+    pinned = db.get_collection("pinned")
+    pinned.delete_many({"user_id": from_id, "partner_id": other_oid})
+    pinned.delete_many({"user_id": other_oid, "partner_id": from_id})
+
+    # Remove from current user's shortlist (wishlist) if present.
+    wishlist = db.get_collection("wishlist")
+    wishlist.delete_many({"user_id": from_id, "profile_id": other_oid})
+
+
     return JsonResponse({"blocked": True})
+
 
 
 def blocked_list_view(request):
@@ -1002,11 +1057,16 @@ def api_profiles_filter_view(request):
 
     Frontend calls: GET /api/profiles/?religion=...&profession=...&city=...
 
+    Important behavior:
+      - If the Matches filter form is empty, return the unfiltered list
+        (only apply opposite-gender + exclude blocked users).
+
     Response shape:
       { "profiles": [ { id, full_name, age, profession, city, education, height,
                          religion, mother_tongue, bio, verified, compatibility,
                          wishlisted, interested, profile_pic } ... ] }
     """
+
 
     from django.http import JsonResponse
 
@@ -1043,14 +1103,33 @@ def api_profiles_filter_view(request):
     mother_tongue = get_str("mother_tongue")
     height = get_str("height")
 
-    age_min = request.GET.get("age_min")
-    age_max = request.GET.get("age_max")
+    age_min = get_str("age_min")
+    age_max = get_str("age_max")
 
-    salary_min = request.GET.get("salary_min")
-    salary_max = request.GET.get("salary_max")
+    salary_min = get_str("salary_min")
+    salary_max = get_str("salary_max")
 
     # Build query
     query = {}
+
+    # Detect empty filter form: if all supported filters are blank,
+    # we should return an unfiltered matches list (still respecting
+    # opposite-gender + exclude blocked users).
+    has_any_filter = any(
+        [
+            bool(religion),
+            bool(profession),
+            bool(city),
+            bool(education),
+            bool(mother_tongue),
+            bool(height),
+            bool(age_min),
+            bool(age_max),
+            bool(salary_min),
+            bool(salary_max),
+        ]
+    )
+
 
     # Exclude blocked users from results (so Dashboard/Matches never show blocked profiles)
     if user_oid:
@@ -1064,65 +1143,70 @@ def api_profiles_filter_view(request):
     if target_gender:
         query["gender"] = target_gender
 
-    if religion:
-        query["religion"] = {"$regex": religion, "$options": "i"}
-    if profession:
-        query["profession"] = {"$regex": profession, "$options": "i"}
-    if city:
-        query["city"] = {"$regex": city, "$options": "i"}
-    if education:
-        query["education"] = {"$regex": education, "$options": "i"}
-    if mother_tongue:
-        query["mother_tongue"] = {"$regex": mother_tongue, "$options": "i"}
 
-    # Height is stored inconsistently (string vs numeric).
-    # IMPORTANT: height values coming from UI like 5'10" are NOT floatable.
-    # Keep it regex-based unless it's a clean numeric.
-    if height:
-        h = height.strip()
-        # Treat only pure numeric strings as numeric.
-        if h.replace(".", "", 1).isdigit():
-            query["height"] = float(h)
-        else:
-            query["height"] = {"$regex": h, "$options": "i"}
+    # If user provided at least one filter, apply advanced filters.
+    # Otherwise, keep query limited to gender + blocked users.
+    if has_any_filter:
+        if religion:
+            query["religion"] = {"$regex": religion, "$options": "i"}
+        if profession:
+            query["profession"] = {"$regex": profession, "$options": "i"}
+        if city:
+            query["city"] = {"$regex": city, "$options": "i"}
+        if education:
+            query["education"] = {"$regex": education, "$options": "i"}
+        if mother_tongue:
+            query["mother_tongue"] = {"$regex": mother_tongue, "$options": "i"}
 
-    # Age range (safe parsing)
-    try:
-        if age_min:
-            query.setdefault("age", {})
-            query["age"]["$gte"] = int(age_min)
-        if age_max:
-            query.setdefault("age", {})
-            query["age"]["$lte"] = int(age_max)
-    except Exception:
-        # ignore age filter parse issues
-        pass
+        # Height is stored inconsistently (string vs numeric).
+        # IMPORTANT: height values coming from UI like 5'10" are NOT floatable.
+        # Keep it regex-based unless it's a clean numeric.
+        if height:
+            h = height.strip()
+            # Treat only pure numeric strings as numeric.
+            if h.replace(".", "", 1).isdigit():
+                query["height"] = float(h)
+            else:
+                query["height"] = {"$regex": h, "$options": "i"}
 
-    # Salary range (safe parsing)
-    salary_min_i = None
-    salary_max_i = None
-    try:
-        if salary_min:
-            salary_min_i = int(salary_min)
-        if salary_max:
-            salary_max_i = int(salary_max)
-    except Exception:
+        # Age range (safe parsing)
+        try:
+            if age_min:
+                query.setdefault("age", {})
+                query["age"]["$gte"] = int(age_min)
+            if age_max:
+                query.setdefault("age", {})
+                query["age"]["$lte"] = int(age_max)
+        except Exception:
+            # ignore age filter parse issues
+            pass
+
+        # Salary range (safe parsing)
         salary_min_i = None
         salary_max_i = None
+        try:
+            if salary_min:
+                salary_min_i = int(salary_min)
+            if salary_max:
+                salary_max_i = int(salary_max)
+        except Exception:
+            salary_min_i = None
+            salary_max_i = None
 
-    if salary_min_i is not None or salary_max_i is not None:
-        salary_range = {}
-        if salary_min_i is not None:
-            salary_range["$gte"] = salary_min_i
-        if salary_max_i is not None:
-            salary_range["$lte"] = salary_max_i
+        if salary_min_i is not None or salary_max_i is not None:
+            salary_range = {}
+            if salary_min_i is not None:
+                salary_range["$gte"] = salary_min_i
+            if salary_max_i is not None:
+                salary_range["$lte"] = salary_max_i
 
-        # Match either field.
-        query["$or"] = [
-            {"annual_salary": salary_range},
-            {"salary": salary_range},
-            {"annualIncome": salary_range},
-        ]
+            # Match either field.
+            query["$or"] = [
+                {"annual_salary": salary_range},
+                {"salary": salary_range},
+                {"annualIncome": salary_range},
+            ]
+
 
 
     # Fetch results
@@ -1155,6 +1239,85 @@ def api_profiles_filter_view(request):
     return JsonResponse({"profiles": profiles})
 
 
+def messages_mark_seen_view(request):
+    """Store last seen timestamp in session for chat unread counting.
+
+    The frontend sends ISO8601 strings via JS. We normalize them into a
+    strict ISO string that datetime.fromisoformat can parse back.
+    """
+    from django.http import JsonResponse
+    if request.method != "POST":
+        return JsonResponse({"ok": False})
+
+    try:
+        import json
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        payload = {}
+
+    last_seen_at = payload.get("lastSeenAt")
+    if not last_seen_at:
+        return JsonResponse({"ok": False})
+
+    # Normalize to a format datetime.fromisoformat can parse reliably.
+    # Example JS toISOString(): '2026-07-12T10:20:30.123Z' (ends with 'Z').
+    try:
+        if isinstance(last_seen_at, str) and last_seen_at.endswith("Z"):
+            last_seen_at = last_seen_at[:-1] + "+00:00"
+
+        dt = datetime.fromisoformat(last_seen_at)
+        request.session["chat_last_seen_at"] = dt.isoformat()
+        return JsonResponse({"ok": True})
+    except Exception:
+        # Fallback: store raw value (previous behavior)
+        request.session["chat_last_seen_at"] = str(last_seen_at)
+        return JsonResponse({"ok": True})
+
+
+
+def messages_unread_count_view(request):
+    """Return unread chat message count for current user.
+
+
+    NOTE: The current Mongo schema for messages does not include read/unread flags.
+    For now, we approximate unread count as number of messages received by the user
+    since the last page load timestamp stored in session.
+
+    Returns: {"count": int}
+    """
+    from django.http import JsonResponse
+
+    if request.method != "GET":
+        return JsonResponse({"count": 0})
+
+    user_oid = _get_request_user_object_id(request)
+    if not user_oid:
+        return JsonResponse({"count": 0})
+
+    users = get_users_collection()
+    db = users.database
+    messages_col = db.get_collection("messages")
+
+    last_seen = request.session.get("chat_last_seen_at")
+    if not last_seen:
+        last_seen = None
+
+    # If last_seen is stored as ISO string, convert to datetime; else treat as None.
+    dt_last_seen = None
+    if last_seen:
+        try:
+            dt_last_seen = datetime.fromisoformat(last_seen)
+        except Exception:
+            dt_last_seen = None
+
+    query = {"receiver_id": user_oid}
+    if dt_last_seen:
+        query["created_at"] = {"$gt": dt_last_seen}
+
+    count = messages_col.count_documents(query)
+    return JsonResponse({"count": int(count)})
+
+
 def debug_session_view(request):
 
 
@@ -1162,6 +1325,7 @@ def debug_session_view(request):
 
     Used to diagnose why /dashboard/ keeps redirecting to login.
     """
+
     from django.http import JsonResponse
 
     keys = list(request.session.keys())

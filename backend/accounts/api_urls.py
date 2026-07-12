@@ -48,12 +48,21 @@ urlpatterns = [
 
     # Conversations + messages
     path("conversations/", views.conversations_view, name="conversations"),
-    path("messages/<str:partner_id>/", views.messages_thread_view, name="messages_thread"),
+
+    # Unread chat badge count (must be defined before the generic
+    # messages/<str:partner_id>/ route, otherwise 'unread-count' gets
+    # captured as partner_id and breaks ObjectId parsing.)
+    path("messages/unread-count/", views.messages_unread_count_view, name="messages_unread_count"),
+    path("messages/mark-seen/", views.messages_mark_seen_view, name="messages_mark_seen"),
+
     path("messages/send/<str:partner_id>/", views.messages_send_view, name="messages_send"),
+    path("messages/<str:partner_id>/", views.messages_thread_view, name="messages_thread"),
 
     # Blocking (mutual)
     path("block/toggle/<str:profile_id>/", views.block_toggle_view, name="block_toggle"),
     path("blocked/", views.blocked_list_view, name="blocked_list"),
+
+
 ]
 
 

@@ -54,6 +54,8 @@
         {% endif %}
 
         <form method="post" class="vivah-form" enctype="multipart/form-data">
+          
+          
           {% csrf_token %}
 
           <div class="field-row">
@@ -86,6 +88,16 @@
             <div class="field">
               <label for="height">Height (e.g. 5'10")</label>
               <input type="text" id="height" name="height" value="{{ user.height|default:'' }}">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="annual_salary">Annual Salary (₹)</label>
+              <input type="number" id="annual_salary" name="annual_salary" value="{{ user.annual_salary|default:'' }}" min="0" step="1000">
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
             </div>
           </div>
 

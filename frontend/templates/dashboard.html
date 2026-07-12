@@ -42,7 +42,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
-        <span class="nav-badge">4</span>
+        <span class="nav-badge" id="chatNavBadge">0</span>
       </button>
       <a href="{% url 'logout' %}" class="icon-action" aria-label="Logout" style="text-decoration:none;" id="topLogoutBtn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -56,7 +56,7 @@
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
-        <span class="nav-badge">7</span>
+        <span class="nav-badge" id="notifNavBadge">0</span>
       </button>
 
       <div class="nav-profile" id="profileDropdownBtn">
@@ -243,9 +243,9 @@
         </div>
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Activity</span>
-          <a href="#" class="sidebar-link" data-section="interests">Interests <span class="sidebar-link__count sidebar-link__count--red">3</span></a>
-          <a href="#" class="sidebar-link" data-section="visitors">Recent Visitors <span class="sidebar-link__count">12</span></a>
-          <a href="#" class="sidebar-link" data-section="notifications">Notifications <span class="sidebar-link__count sidebar-link__count--red">7</span></a>
+          <a href="#" class="sidebar-link" data-section="interests">Interests <span class="sidebar-link__count sidebar-link__count--red" id="sidebarInterestsCount">0</span></a>
+          <a href="#" class="sidebar-link" data-section="visitors">Recent Visitors <span class="sidebar-link__count" id="sidebarVisitorsCount">0</span></a>
+          <a href="#" class="sidebar-link" data-section="notifications">Notifications <span class="sidebar-link__count sidebar-link__count--red" id="sidebarNotificationsCount">0</span></a>
         </div>
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Account</span>
@@ -711,6 +711,52 @@
         showToast('Error updating wishlist', 'error');
       }
     }
+
+    async function syncActivityCounts() {
+      // Interests: count pinned connections
+      try {
+        const pinnedRes = await fetch('/pinned/', { method: 'GET' });
+        const pinnedData = await pinnedRes.json();
+        const interestsCountEl = document.getElementById('sidebarInterestsCount');
+        if (interestsCountEl) interestsCountEl.textContent = (pinnedData.pinned_profiles || []).length;
+      } catch (e) {}
+
+      // Notifications: pending incoming interests
+      try {
+        const notifRes = await fetch('/notifications/', { method: 'GET' });
+        const notifData = await notifRes.json();
+        const count = (notifData.notifications || []).length;
+        const notificationsCountEl = document.getElementById('sidebarNotificationsCount');
+        if (notificationsCountEl) notificationsCountEl.textContent = count;
+        const notifNavBadge = document.getElementById('notifNavBadge');
+        if (notifNavBadge) notifNavBadge.textContent = count;
+      } catch (e) {}
+
+      // Chats: unread message count
+      try {
+        const unreadRes = await fetch('/messages/unread-count/', { method: 'GET' });
+        const unreadData = await unreadRes.json();
+        const count = unreadData.count || 0;
+        const chatNavBadge = document.getElementById('chatNavBadge');
+        if (chatNavBadge) chatNavBadge.textContent = count;
+
+        // Mark chat as seen now for next refresh.
+        // Use a value that backend can parse (ISO string).
+        const nowIso = new Date().toISOString();
+        // Best-effort: store in session via a lightweight request.
+        await fetch('/messages/mark-seen/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lastSeenAt: nowIso })
+        });
+      } catch (e) {}
+
+
+      // Visitors: not implemented in backend yet, keep 0
+      const visitorsCountEl = document.getElementById('sidebarVisitorsCount');
+      if (visitorsCountEl) visitorsCountEl.textContent = '0';
+    }
+
 
     async function updateShortlistedCount() {
       try {
@@ -1186,6 +1232,12 @@
         }
       }
       applyMatchesFilters(hasAnyValue ? formData : new FormData());
+
+      // If the form is empty, load ALL profiles instead of sending an empty filter request
+      // that may trigger a server-side validation error.
+      if (!hasAnyValue) {
+        showSection('overview');
+      }
     });
 
     // Reset form (clear all fields)
@@ -1201,9 +1253,10 @@
     document.getElementById('matchesCount').textContent = "{{ profiles|length }}";
     document.getElementById('totalMatches').textContent = "{{ profiles|length }}";
 
-    // Initial sync for shortlisted
+    // Initial sync for activity counts
     updateShortlistedCount();
     syncMainButtons();
+    syncActivityCounts();
 
     // ─── Event Delegation: Wishlist, View, Interest (works for both main grid and any dynamic content) ───
     document.addEventListener('click', function(e) {
