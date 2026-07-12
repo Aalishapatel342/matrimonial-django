@@ -1,40 +1,44 @@
 /* =====================================================================
-   VIVAH — Authentication Pages (Login / Register)
-   Two‑column layout with maroon hero panel and a clean form on the right.
-   Fully responsive, matches the Vivaaah.com theme.
-===================================================================== */
+   VIVAH — Authentication (Wedding Theme)
+   Glass‑morphism, blurred wedding background, romantic palette.
+   ===================================================================== */
 
-/* ---- Main wrapper ---- */
 .auth-view {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 32px 20px;
-  background: var(--cream);
+  background-image:
+    linear-gradient(135deg,
+      rgba(74, 17, 39, 0.40) 0%,
+      rgba(201, 151, 46, 0.20) 50%,
+      rgba(74, 17, 39, 0.35) 100%),
+    url('https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=1920&q=80');
+  background-size: cover;
+  background-position: center 20%;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 .auth-shell {
   width: 100%;
   max-width: 960px;
-  background: var(--surface);
-  border-radius: 24px;
+  border-radius: 28px;
   overflow: hidden;
-  box-shadow: var(--shadow-lg);
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 640px;
-  transition: box-shadow 0.3s ease;
+  background: rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  box-shadow: 0 24px 60px rgba(44, 24, 16, 0.25);
 }
 
-.auth-shell:hover {
-  box-shadow: 0 32px 80px rgba(69, 20, 42, 0.18);
-}
-
-/* ---- HERO PANEL (left) ---- */
 .auth-hero {
-  background: radial-gradient(circle at 20% 15%, rgba(232, 193, 112, 0.25), transparent 55%),
-              linear-gradient(160deg, var(--maroon) 0%, var(--maroon-dark) 100%);
+  background: radial-gradient(circle at 20% 15%, rgba(232, 193, 112, 0.20), transparent 55%),
+              linear-gradient(160deg, rgba(122, 26, 60, 0.92), rgba(78, 17, 40, 0.95));
   color: #fff;
   padding: 48px 40px;
   display: flex;
@@ -43,20 +47,18 @@
   position: relative;
   overflow: hidden;
 }
-
 .auth-hero::before {
   content: "";
   position: absolute;
   inset: 0;
-  opacity: 0.12;
+  opacity: 0.10;
   pointer-events: none;
   background-image: radial-gradient(circle, #fff 1px, transparent 1px);
   background-size: 22px 22px;
 }
-
 .motif {
   position: absolute;
-  opacity: 0.16;
+  opacity: 0.12;
 }
 .motif.m1 {
   top: -40px;
@@ -71,13 +73,6 @@
   height: 180px;
 }
 
-.hero-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  position: relative;
-  z-index: 1;
-}
 .hero-logo .rings {
   width: 34px;
   height: 34px;
@@ -89,11 +84,6 @@
   letter-spacing: 0.01em;
 }
 
-.hero-mid {
-  position: relative;
-  z-index: 1;
-  margin-top: 40px;
-}
 .hero-mid h1 {
   font-family: var(--font-d);
   font-weight: 600;
@@ -111,8 +101,6 @@
 }
 
 .hero-stats {
-  position: relative;
-  z-index: 1;
   display: flex;
   gap: 28px;
   margin-top: auto;
@@ -130,11 +118,13 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* ---- FORM PANEL (right) ---- */
 .auth-panel {
   padding: 46px 44px;
   display: flex;
   align-items: center;
+  background: rgba(255, 255, 255, 0.30);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 .auth-panel-inner {
   width: 100%;
@@ -142,7 +132,6 @@
   margin: 0 auto;
 }
 
-/* Mobile logo (visible on small screens) */
 .mobile-logo {
   display: none;
   align-items: center;
@@ -156,7 +145,6 @@
   color: var(--maroon);
 }
 
-/* ---- Form itself ---- */
 .auth-form h2 {
   font-family: var(--font-d);
   font-size: 30px;
@@ -169,7 +157,7 @@
   margin: 0 0 24px 0;
 }
 
-/* ---- Responsive adjustments ---- */
+/* ----- Responsive Auth ----- */
 @media (max-width: 860px) {
   .auth-shell {
     grid-template-columns: 1fr;
@@ -184,9 +172,11 @@
   }
   .auth-panel {
     padding: 36px 26px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 }
-
 @media (max-width: 480px) {
   .auth-panel {
     padding: 24px 18px;

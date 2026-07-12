@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from django.contrib import messages
+
 from django.contrib.auth.hashers import check_password, make_password
 from django.shortcuts import redirect, render
 
@@ -11,6 +12,47 @@ import pymongo
 from .db import get_users_collection
 from .validators import validate_login, validate_registration
 
+
+from datetime import date
+from typing import Any, Optional
+
+
+def _compute_age_from_dob(dob_value: Any) -> Optional[int]:
+    """Compute age (years) from a Mongo `dob` field."""
+    if dob_value is None:
+        return None
+    try:
+        if hasattr(dob_value, "year") and hasattr(dob_value, "month") and hasattr(dob_value, "day"):
+            birth_date = date(dob_value.year, dob_value.month, dob_value.day)
+        else:
+            dob_str = str(dob_value).strip()
+            if not dob_str:
+                return None
+            birth_date = datetime.strptime(dob_str[:10], "%Y-%m-%d").date()
+
+        today = date.today()
+        years = today.year - birth_date.year
+        if (today.month, today.day) < (birth_date.month, birth_date.day):
+            years -= 1
+        if years < 0:
+            return None
+        return int(years)
+    except Exception:
+        return None
+
+
+def _profile_age(profile_doc: dict) -> int:
+    stored_age = profile_doc.get("age")
+    try:
+        if stored_age not in (None, ""):
+            stored_age_i = int(stored_age)
+            if stored_age_i > 0:
+                return stored_age_i
+    except Exception:
+        pass
+
+    computed = _compute_age_from_dob(profile_doc.get("dob"))
+    return computed if computed is not None else 0
 
 
 def register_view(request):
@@ -65,18 +107,31 @@ def login_view(request):
 
         if not errors:
             users = get_users_collection()
-            user = users.find_one(
-                {"$or": [{"email": cleaned["identifier"]}, {"phone": cleaned["identifier"]}]}
-            )
+
+            # Determine whether identifier exists as email/phone first,
+            # so the feedback is accurate and doesn't blame the wrong field.
+            identifier = cleaned["identifier"]
+            email_user = users.find_one({"email": identifier}) if identifier else None
+            phone_user = users.find_one({"phone": identifier}) if identifier else None
+
+            user = email_user or phone_user
+
             if user and check_password(cleaned["password"], user["password"]):
                 request.session["user_id"] = str(user["_id"])
                 request.session["full_name"] = user["full_name"]
                 return redirect("dashboard")
-            errors.append("That email/mobile number and password don't match our records.")
+
+            # Identifier not found => email/mobile is wrong.
+            if not user:
+                errors.append("Email does not exist.")
+            else:
+                errors.append("Check your password.")
+
 
         for err in errors:
             messages.error(request, err)
         return render(request, "login.html", {"form_data": request.POST})
+
 
     return render(request, "login.html")
 
@@ -180,7 +235,9 @@ def dashboard_view(request):
             {
                 "id": str(p.get("_id")),
                 "full_name": p.get("full_name", ""),
-                "age": p.get("age", 0),
+                "age": _profile_age(p),
+
+
                 "profession": p.get("profession", ""),
                 "city": p.get("city", ""),
                 "education": p.get("education", ""),
@@ -260,11 +317,31 @@ def edit_profile_view(request):
             messages.error(request, "Session expired. Please sign in again.")
             return redirect("login")
 
+        # Validate DOB on edit: user must remain >= 18 and DOB cannot be in the future.
+        raw_dob = (request.POST.get("dob") or "").strip()
+        dob_to_store = None
+        if raw_dob:
+            try:
+                birth_date = datetime.strptime(raw_dob, "%Y-%m-%d")
+                if birth_date > datetime.now():
+                    messages.error(request, "Date of birth cannot be in the future.")
+                    return redirect("edit_profile")
+                age_days = (datetime.now() - birth_date).days
+                if age_days < 18 * 365:
+                    messages.error(request, "You can not update the date of birth because it makes you under 18.")
+                    return redirect("edit_profile")
+                dob_to_store = raw_dob
+            except ValueError:
+                messages.error(request, "Date of birth is not a valid date.")
+                return redirect("edit_profile")
+
         payload = {
             "full_name": (request.POST.get("full_name") or "").strip(),
-            "dob": request.POST.get("dob") or None,
+            "dob": dob_to_store,
             "profession": (request.POST.get("profession") or "").strip(),
+
             "city": (request.POST.get("city") or "").strip(),
+
             "education": (request.POST.get("education") or "").strip(),
             "height": (request.POST.get("height") or "").strip(),
             "religion": (request.POST.get("religion") or "").strip(),
@@ -374,8 +451,10 @@ def interest_toggle_view(request, profile_id):
 
     users = get_users_collection()
     db = users.database
+    # If the pair is already blocked (either direction), disallow interest changes.
     if to_oid_tmp and _is_blocked_mutual(db, user_oid, to_oid_tmp):
         return JsonResponse({"interested": False, "blocked": True})
+
 
 
     from_id = _get_request_user_object_id(request)
@@ -390,6 +469,21 @@ def interest_toggle_view(request, profile_id):
     users = get_users_collection()
     db = users.database
     interests = db.get_collection("interests")
+
+    # Once two users are connected (pinned), they must not be able to
+    # “disconnect” by toggling interest. So if pinned exists in either
+    # direction, short-circuit and never update interests.
+    pinned = db.get_collection("pinned")
+    is_connected = bool(
+        pinned.find_one({"user_id": from_id, "partner_id": to_oid})
+        or pinned.find_one({"user_id": to_oid, "partner_id": from_id})
+    )
+
+    # If already connected (pinned exists), do not allow toggling.
+    # Return an explicit state so the frontend can keep the button label as "Connected".
+    if is_connected:
+        return JsonResponse({"interested": True, "state": "connected"})
+
 
     unique_filter = {"from_user_id": from_id, "to_user_id": to_oid}
 
@@ -407,6 +501,7 @@ def interest_toggle_view(request, profile_id):
                 {"$set": {"status": "declined", "updated_at": datetime.utcnow()}},
             )
             return JsonResponse({"interested": False})
+
 
         # Otherwise set/create pending using the unique index filter only.
         interests.update_one(
@@ -546,7 +641,7 @@ def pinned_view(request):
             {
                 "id": str(partner_oid),
                 "full_name": partner.get("full_name", ""),
-                "age": partner.get("age", ""),
+                "age": _profile_age(partner),
                 "profession": partner.get("profession", ""),
                 "city": partner.get("city", ""),
                 "education": partner.get("education", ""),
@@ -644,7 +739,7 @@ def profile_detail_view(request, profile_id):
         {
             "id": str(user.get("_id")),
             "full_name": user.get("full_name", ""),
-            "age": user.get("age", 0),
+            "age": _profile_age(user),
             "profession": user.get("profession", ""),
             "city": user.get("city", ""),
             "education": user.get("education", ""),
@@ -924,15 +1019,24 @@ def block_toggle_view(request, profile_id):
         ]
     )
 
-    # If these users were connected before blocking, remove the pinned connection
-    # so Blocked users disappear from Connected/Interests.
+    # If these users were connected before blocking, remove the connection
+    # and also clear any pending interest records involving this pair.
     pinned = db.get_collection("pinned")
     pinned.delete_many({"user_id": from_id, "partner_id": other_oid})
     pinned.delete_many({"user_id": other_oid, "partner_id": from_id})
 
+    interests = db.get_collection("interests")
+    interests.delete_many({
+        "$or": [
+            {"from_user_id": from_id, "to_user_id": other_oid},
+            {"from_user_id": other_oid, "to_user_id": from_id},
+        ]
+    })
+
     # Remove from current user's shortlist (wishlist) if present.
     wishlist = db.get_collection("wishlist")
     wishlist.delete_many({"user_id": from_id, "profile_id": other_oid})
+
 
 
     return JsonResponse({"blocked": True})

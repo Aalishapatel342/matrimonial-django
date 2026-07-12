@@ -71,11 +71,12 @@ def validate_registration(data):
 def validate_login(data):
     errors = []
     cleaned = {
-        "identifier": data.get("identifier", "").strip().lower(),
+        # support both the old field name (identifier) and the current login template (email)
+        "identifier": (data.get("identifier") or data.get("email") or "").strip().lower(),
         "password": data.get("password", ""),
     }
     if not cleaned["identifier"]:
-        errors.append("Please enter your email or mobile number.")
+        errors.append("Please enter your email.")
     if not cleaned["password"]:
         errors.append("Please enter your password.")
     return errors, cleaned

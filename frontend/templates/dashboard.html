@@ -21,13 +21,6 @@
         <span class="nav-logo__text">VIVAH</span>
       </div>
     </div>
-      <nav class="nav-center">
-      <a href="#" class="nav-link active" data-section="overview">Dashboard</a>
-      <a href="#" class="nav-link" data-section="search">Search</a>
-      <a href="#" class="nav-link" data-section="matches">Matches</a>
-      <a href="#" class="nav-link" data-section="interests">Interests</a>
-      <a href="#" class="nav-link" data-section="blocked">Blocked</a>
-    </nav>
     <div class="nav-right">
       <button class="icon-action" id="themeToggle" aria-label="Toggle theme">
         <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -85,8 +78,6 @@
           </div>
           <hr class="dropdown-divider" />
           <a href="{% url 'edit_profile_root' %}" class="dropdown-item">My Profile</a>
-          <a href="#" class="dropdown-item">Edit Profile</a>
-          <a href="#" class="dropdown-item">Partner Preferences</a>
           <a href="#" class="dropdown-item">Subscription</a>
           <a href="#" class="dropdown-item">Settings</a>
           <hr class="dropdown-divider" />
@@ -233,14 +224,15 @@
           <span class="sidebar-nav__label">Main</span>
           <a href="#" class="sidebar-link active" data-section="overview">Dashboard</a>
           <a href="{% url 'edit_profile' %}" class="sidebar-link">My Profile</a>
-          <a href="#" class="sidebar-link" data-section="edit-profile">Edit Profile</a>
         </div>
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Discovery</span>
           <a href="#" class="sidebar-link" data-section="search">Search Profiles</a>
           <a href="#" class="sidebar-link" data-section="matches">Matches <span class="sidebar-link__count" id="matchesCount">0</span></a>
           <a href="#" class="sidebar-link" data-section="shortlisted">Shortlisted <span class="sidebar-link__count" id="shortlistedCount">0</span></a>
-        </div>
+          <a href="#" class="sidebar-link" data-section="blocked">Blocked <span class="sidebar-link__count" id="blockedCount">0</span></a>
+
+          </div>
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Activity</span>
           <a href="#" class="sidebar-link" data-section="interests">Interests <span class="sidebar-link__count sidebar-link__count--red" id="sidebarInterestsCount">0</span></a>
@@ -250,7 +242,6 @@
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Account</span>
           <a href="#" class="sidebar-link" data-section="subscription">Subscription</a>
-          <a href="#" class="sidebar-link" data-section="settings">Settings</a>
           <a href="#" class="sidebar-link" data-section="help">Help &amp; Support</a>
         </div>
       </nav>
@@ -262,12 +253,7 @@
         <p>{% if user_gender == 'male' %}Here are bride profiles curated for you.{% else %}Here are groom profiles curated for you.{% endif %}</p>
       </div>
 
-      <div class="stats-row">
-        <div class="stat-card"><h3 id="totalMatches">{{ profiles|length }}</h3><p>Potential Matches</p></div>
-        <div class="stat-card"><h3>0</h3><p>Interests Sent</p></div>
-        <div class="stat-card"><h3>0</h3><p>Interests Received</p></div>
-        <div class="stat-card"><h3>78%</h3><p>Profile Strength</p></div>
-      </div>
+
 
       <!-- Global Filter bar (visible on overview/search) -->
       <div class="filter-bar" id="globalFilterBar">
@@ -275,21 +261,9 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
           <input type="text" id="searchInput" placeholder="Search by name or profession..." value="{{ search }}">
         </div>
-        <select id="ageFilter">
-          <option value="">Any age</option>
-          <option value="18-25" {% if age == '18-25' %}selected{% endif %}>18 – 25 yrs</option>
-          <option value="26-30" {% if age == '26-30' %}selected{% endif %}>26 – 30 yrs</option>
-          <option value="31-35" {% if age == '31-35' %}selected{% endif %}>31 – 35 yrs</option>
-          <option value="36-99" {% if age == '36-99' %}selected{% endif %}>36+ yrs</option>
-        </select>
-        <select id="cityFilter">
-          <option value="">All cities</option>
-          {% for c in cities %}
-            <option value="{{ c }}" {% if city == c %}selected{% endif %}>{{ c }}</option>
-          {% endfor %}
-        </select>
-        <button class="filter-reset" id="resetFilters">Reset</button>
+        <button class="filter-reset" id="searchBtn">Search</button>
       </div>
+
 
       <!-- Interests section -->
       <section class="interests-section" id="interestsSection" style="display:none;">
@@ -497,7 +471,8 @@
       }
       return cookieValue;
     }
-    const csrftoken = window.CSRF_TOKEN || getCookie('csrftoken');
+    const csrftoken = getCookie('csrftoken') || window.CSRF_TOKEN;
+
 
     function escHtml(s) {
       return (s ?? '').toString()
@@ -752,6 +727,16 @@
       } catch (e) {}
 
 
+      // Blocked: count blocked profiles
+      try {
+        const blockedRes = await fetch('/blocked/', { method: 'GET' });
+        if (blockedRes.ok) {
+          const blockedData = await blockedRes.json();
+          const blockedCountEl = document.getElementById('blockedCount');
+          if (blockedCountEl) blockedCountEl.textContent = (blockedData.profiles || []).length;
+        }
+      } catch (e) { /* ignore */ }
+
       // Visitors: not implemented in backend yet, keep 0
       const visitorsCountEl = document.getElementById('sidebarVisitorsCount');
       if (visitorsCountEl) visitorsCountEl.textContent = '0';
@@ -841,6 +826,22 @@
       })
       .then(response => response.json())
       .then(data => {
+        // If backend says the pair is already connected, keep UI as Connected.
+        if (data?.state === 'connected') {
+          const cardBtn = document.querySelector(`.profile-card[data-id="${profileId}"] .interest`);
+          if (cardBtn) {
+            cardBtn.textContent = 'Connected';
+            cardBtn.classList.remove('sent');
+          }
+          const modalBtn = document.querySelector('#modalCard .interest');
+          if (modalBtn) {
+            modalBtn.textContent = 'Connected';
+            modalBtn.classList.remove('sent');
+          }
+          if (callback) callback(true);
+          return;
+        }
+
         if (callback) callback(data.interested);
         const cardBtn = document.querySelector(`.profile-card[data-id="${profileId}"] .interest`);
         if (cardBtn) {
@@ -861,6 +862,7 @@
         }
       });
     }
+
 
     // ─── Modal for profile view ───
     function openModal(profileId) {
@@ -930,9 +932,10 @@
           const data = await res.json();
           if (data.state === 'connected') {
             btn.textContent = 'Connected';
-            btn.disabled = true;
-            btn.style.opacity = '.7';
-            btn.style.cursor = 'not-allowed';
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.style.cursor = '';
+
           } else if (data.state === 'pending') {
             btn.textContent = 'Interest Sent';
             btn.disabled = false;
@@ -1131,8 +1134,12 @@
         }
 
         // Update match count
-        document.getElementById('matchesCount').textContent = profiles.length;
-        document.getElementById('totalMatches').textContent = profiles.length;
+        const matchesCountEl = document.getElementById('matchesCount');
+        if (matchesCountEl) matchesCountEl.textContent = profiles.length;
+
+        const totalMatchesEl = document.getElementById('totalMatches');
+        if (totalMatchesEl) totalMatchesEl.textContent = profiles.length;
+
 
         // Close the modal
         closeMatchesModal();
@@ -1250,8 +1257,12 @@
     });
 
     // Initial count for matches
-    document.getElementById('matchesCount').textContent = "{{ profiles|length }}";
-    document.getElementById('totalMatches').textContent = "{{ profiles|length }}";
+    const matchesCountInitEl = document.getElementById('matchesCount');
+    if (matchesCountInitEl) matchesCountInitEl.textContent = "{{ profiles|length }}";
+
+    const totalMatchesInitEl = document.getElementById('totalMatches');
+    if (totalMatchesInitEl) totalMatchesInitEl.textContent = "{{ profiles|length }}";
+
 
     // Initial sync for activity counts
     updateShortlistedCount();
@@ -1323,25 +1334,93 @@
     });
 
     // ─── Global Filters (overview/search) ───
-    function applyGlobalFilters() {
-      const params = new URLSearchParams();
-      const search = document.getElementById('searchInput').value;
-      const age = document.getElementById('ageFilter').value;
-      const city = document.getElementById('cityFilter').value;
-      if (search) params.set('search', search);
-      if (age) params.set('age', age);
-      if (city) params.set('city', city);
-      window.location.search = params.toString();
+    function renderProfiles(profiles) {
+      const grid = document.getElementById('profileGrid');
+      if (!grid) return;
+
+      if (!profiles || profiles.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+            <h3>No matches found</h3>
+            <p>Try adjusting your filters or search term.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = profiles.map(p => {
+        const verified = p.verified ? `
+          <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
+        ` : '';
+
+        return `
+          <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}">
+            <div class="pc-head">
+              <div class="avatar-lg" style="${p.profile_pic ? `background-image:url(\\\"${escHtml(p.profile_pic)}\\\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
+              <div>
+                <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
+                <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+              </div>
+            </div>
+            <div class="pc-tags">
+              <span class="pc-tag">${escHtml(p.religion || '')}</span>
+              <span class="pc-tag">${escHtml(p.height || '')}</span>
+              <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
+            </div>
+            <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
+            <div class="pc-match">
+              <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
+              <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
+            </div>
+            <div class="pc-actions">
+              <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist">
+                <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </button>
+              <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}">View</button>
+              <button class="pc-btn interest${p.interested ? ' sent' : ''}" data-action="interest" data-id="${escHtml(p.id)}">
+                ${p.interested ? 'Interest Sent' : 'Send Interest'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // keep sidebar UI counts accurate
+      syncMainButtons();
     }
-    document.getElementById('searchInput')?.addEventListener('input', applyGlobalFilters);
-    document.getElementById('ageFilter')?.addEventListener('change', applyGlobalFilters);
-    document.getElementById('cityFilter')?.addEventListener('change', applyGlobalFilters);
-    document.getElementById('resetFilters')?.addEventListener('click', function() {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('ageFilter').value = '';
-      document.getElementById('cityFilter').value = '';
-      applyGlobalFilters();
+
+    async function applyGlobalFilters() {
+      const search = document.getElementById('searchInput').value.trim();
+      try {
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+
+        // Fetch filtered profiles and render without page reload
+        const res = await fetch(`/api/profiles/?${params.toString()}`);
+        const data = await res.json();
+        renderProfiles(data.profiles || []);
+      } catch (e) {
+        // if API fails, keep current UI
+        showToast('Search failed', 'error');
+      }
+    }
+
+    // Do not auto-search on typing; use the Search button instead.
+    // (Keeping the input value for the Search button.)
+
+
+    document.getElementById('searchBtn')?.addEventListener('click', async function() {
+      // Ensure we are in overview state so grid updates are not overridden.
+      showSection('overview');
+      await applyGlobalFilters();
     });
+
+
+
+
 
     // ─── Polling for real‑time status updates ───
     setInterval(() => {
@@ -1361,4 +1440,3 @@
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
 {% endblock %}
-
