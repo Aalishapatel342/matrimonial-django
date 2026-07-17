@@ -119,6 +119,18 @@ def login_view(request):
             if user and check_password(cleaned["password"], user["password"]):
                 request.session["user_id"] = str(user["_id"])
                 request.session["full_name"] = user["full_name"]
+
+                # Ensure navbar avatar uses the stored profile picture (if any).
+                # edit_profile_view stores profile_pic in session as a data URL;
+                # do the same here so users see it immediately after login.
+                pic = user.get("profile_pic")
+                pic_ct = user.get("profile_pic_content_type")
+                pic_is_pic = bool(user.get("profile_pic_is_profile_pic", False))
+                if pic and pic_ct and pic_is_pic:
+                    request.session["profile_pic"] = "data:" + pic_ct + ";base64," + pic
+                else:
+                    request.session["profile_pic"] = ""
+
                 return redirect("dashboard")
 
             # Identifier not found => email/mobile is wrong.
@@ -147,30 +159,16 @@ def logout_view(request):
 
 def _get_blocked_other_ids(db, user_oid):
 
-    """Return ObjectIds of users blocked by `user_oid`.
-
-    Also excludes `None` and converts to proper ObjectId if needed.
-
-
-    We store mutual documents in collection `blocks`:
-      { user_id: A, blocked_id: B }
-      { user_id: B, blocked_id: A }
-    So for filtering, we only need rows where user_id == current user.
-    """
     blocks = db.get_collection("blocks")
     rows = blocks.find({"user_id": user_oid}, {"blocked_id": 1}).limit(500)
     return [r.get("blocked_id") for r in rows if r.get("blocked_id")]
 
 
 def _profile_completion_percent(profile_doc: dict) -> int:
-    """Compute profile completion % based on filled profile fields.
 
-    Deterministic: no random values.
-    """
 
     if not profile_doc:
         return 0
-
     # Fields present on the edit form / user payload.
     # If later you add more fields, update this list.
     fields = [
@@ -266,39 +264,56 @@ def dashboard_view(request):
         elif age == "36-99":
             query["age"] = {"$gte": 36}
 
-    # Exclude blocked users from dashboard results
-    blocked_ids = _get_blocked_other_ids(users.database, me.get("_id")) if me else []
-    if blocked_ids:
-        query["_id"] = {"$nin": blocked_ids}
+    # Exclude blocked users & self from dashboard results
+    exclude_ids = []
+    if me:
+        exclude_ids.append(me.get("_id"))
+        blocked_ids = _get_blocked_other_ids(users.database, me.get("_id"))
+        if blocked_ids:
+            exclude_ids.extend(blocked_ids)
+    if exclude_ids:
+        query["_id"] = {"$nin": exclude_ids}
 
     profiles_cursor = users.find(query)
 
+    from .api_profiles import add_profile_fields
 
-    # Render cards. Interest state is handled later by JS toggle endpoint,
-    # so we just provide defaults here.
+    # Compute wishlisted, interested, connected sets for the current user
+    wish_set = set()
+    interested_set = set()
+    pinned_set = set()
+    if me:
+        db = users.database
+        pinned = db.get_collection("pinned")
+        wishlist = db.get_collection("wishlist")
+        interests = db.get_collection("interests")
+
+        wish_ids = wishlist.find({"user_id": me.get("_id")}, {"profile_id": 1}).limit(200)
+        wish_set = {w.get("profile_id") for w in wish_ids if w.get("profile_id")}
+
+        interested_ids = interests.find({"from_user_id": me.get("_id"), "status": "pending"}, {"to_user_id": 1}).limit(200)
+        interested_set = {i.get("to_user_id") for i in interested_ids if i.get("to_user_id")}
+
+        pinned_docs = pinned.find({"user_id": me.get("_id")}, {"partner_id": 1}).limit(200)
+        pinned_set = {p.get("partner_id") for p in pinned_docs if p.get("partner_id")}
+        pinned_docs_rev = pinned.find({"partner_id": me.get("_id")}, {"user_id": 1}).limit(200)
+        for p in pinned_docs_rev:
+            uid = p.get("user_id")
+            if uid:
+                pinned_set.add(uid)
+
     profiles = []
     for p in profiles_cursor.limit(50):
-        profiles.append(
-            {
-                "id": str(p.get("_id")),
-                "full_name": p.get("full_name", ""),
-                "age": _profile_age(p),
-
-
-                "profession": p.get("profession", ""),
-                "city": p.get("city", ""),
-                "education": p.get("education", ""),
-                "height": p.get("height", ""),
-                "religion": p.get("religion", ""),
-                "mother_tongue": p.get("mother_tongue", ""),
-                "bio": p.get("bio", ""),
-                "verified": bool(p.get("verified", False)),
-                "compatibility": p.get("compatibility")
-                if p.get("compatibility") is not None
-                else 70,
-                "interested": False,
-            }
-        )
+        profile_id = p.get("_id")
+        if not profile_id:
+            continue
+        formatted = add_profile_fields(p)
+        formatted.update({
+            "wishlisted": bool(profile_id in wish_set),
+            "interested": bool(profile_id in interested_set),
+            "connected": bool(profile_id in pinned_set),
+        })
+        profiles.append(formatted)
 
     cities = sorted({p.get("city", "") for p in users.find(query, {"city": 1}) if p.get("city")})
 
@@ -904,33 +919,35 @@ def wishlist_list_view(request):
     # Get profile_ids first
     wish_docs = wishlist.find({"user_id": user_oid}).limit(200)
     out_profiles = []
+    # Compute interested and connected sets for current user
+    interests = db.get_collection("interests")
+    pinned = db.get_collection("pinned")
+
+    interested_ids = interests.find({"from_user_id": user_oid, "status": "pending"}, {"to_user_id": 1}).limit(200)
+    interested_set = {i.get("to_user_id") for i in interested_ids if i.get("to_user_id")}
+
+    pinned_docs = pinned.find({"user_id": user_oid}, {"partner_id": 1}).limit(200)
+    pinned_set = {p.get("partner_id") for p in pinned_docs if p.get("partner_id")}
+    pinned_docs_rev = pinned.find({"partner_id": user_oid}, {"user_id": 1}).limit(200)
+    for p in pinned_docs_rev:
+        uid = p.get("user_id")
+        if uid:
+            pinned_set.add(uid)
+
+    from .api_profiles import add_profile_fields
 
     for wd in wish_docs:
         pid = wd.get("profile_id")
         if not pid:
             continue
         p = users.find_one({"_id": pid}) or {}
-        out_profiles.append(
-            {
-                "id": str(pid),
-                "full_name": p.get("full_name", ""),
-                "age": p.get("age", ""),
-                "profession": p.get("profession", ""),
-                "city": p.get("city", ""),
-                "education": p.get("education", ""),
-                "height": p.get("height", ""),
-                "religion": p.get("religion", ""),
-                "mother_tongue": p.get("mother_tongue", ""),
-                "bio": p.get("bio", ""),
-                "verified": bool(p.get("verified", False)),
-                "profile_pic_is_profile_pic": bool(p.get("profile_pic_is_profile_pic", False)),
-                "profile_pic": p.get("profile_pic"),
-
-                "profile_pic_content_type": p.get("profile_pic_content_type"),
-                "compatibility": p.get("compatibility") or 70,
-                "interested": False,
-            }
-        )
+        formatted = add_profile_fields(p)
+        formatted.update({
+            "wishlisted": True,
+            "interested": bool(pid in interested_set),
+            "connected": bool(pid in pinned_set),
+        })
+        out_profiles.append(formatted)
 
     return JsonResponse({"profiles": out_profiles})
 
@@ -1125,24 +1142,16 @@ def blocked_list_view(request):
     other_ids = [r.get("blocked_id") for r in rows if r.get("blocked_id")]
 
     out = []
+    from .api_profiles import add_profile_fields
     for oid in other_ids:
         p = users.find_one({"_id": oid}) or {}
-        out.append(
-            {
-                "id": str(oid),
-                "full_name": p.get("full_name", ""),
-                "age": p.get("age", ""),
-                "profession": p.get("profession", ""),
-                "city": p.get("city", ""),
-                "education": p.get("education", ""),
-                "height": p.get("height", ""),
-                "religion": p.get("religion", ""),
-                "mother_tongue": p.get("mother_tongue", ""),
-                "bio": p.get("bio", ""),
-                "verified": bool(p.get("verified", False)),
-                "compatibility": p.get("compatibility") or 70,
-            }
-        )
+        formatted = add_profile_fields(p)
+        formatted.update({
+            "wishlisted": False,
+            "interested": False,
+            "connected": False,
+        })
+        out.append(formatted)
 
     return JsonResponse({"profiles": out})
 
@@ -1275,9 +1284,7 @@ def api_profiles_filter_view(request):
     # Build query
     query = {}
 
-    # Detect empty filter form: if all supported filters are blank,
-    # we should return an unfiltered matches list (still respecting
-    # opposite-gender + exclude blocked users).
+    # Detect empty filter form
     has_any_filter = any(
         [
             bool(religion),
@@ -1293,111 +1300,126 @@ def api_profiles_filter_view(request):
         ]
     )
 
-
-    # Exclude blocked users from results (so Dashboard/Matches never show blocked profiles)
-    if user_oid:
-        blocked_ids = _get_blocked_other_ids(users.database, user_oid)
-        # Guard: if blocked_ids is empty or None, do nothing.
-        if blocked_ids and len(blocked_ids) > 0:
-            # Ensure types are correct for Mongo query (ObjectIds)
-            query["_id"] = {"$nin": blocked_ids}
-
+    # Exclude blocked users and self from results
+    exclude_ids = [user_oid]
+    blocked_ids = _get_blocked_other_ids(users.database, user_oid)
+    if blocked_ids:
+        exclude_ids.extend(blocked_ids)
+    query["_id"] = {"$nin": exclude_ids}
 
     if target_gender:
         query["gender"] = target_gender
 
+    # Fetch candidates and apply robust Python-side filtering
+    import re
+    cursor = users.find(query)
 
-    # If user provided at least one filter, apply advanced filters.
-    # Otherwise, keep query limited to gender + blocked users.
-    if has_any_filter:
-        if religion:
-            query["religion"] = {"$regex": religion, "$options": "i"}
-        if profession:
-            query["profession"] = {"$regex": profession, "$options": "i"}
-        if city:
-            query["city"] = {"$regex": city, "$options": "i"}
-        if education:
-            query["education"] = {"$regex": education, "$options": "i"}
-        if mother_tongue:
-            query["mother_tongue"] = {"$regex": mother_tongue, "$options": "i"}
-
-        # Height is stored inconsistently (string vs numeric).
-        # IMPORTANT: height values coming from UI like 5'10" are NOT floatable.
-        # Keep it regex-based unless it's a clean numeric.
-        if height:
-            h = height.strip()
-            # Treat only pure numeric strings as numeric.
-            if h.replace(".", "", 1).isdigit():
-                query["height"] = float(h)
-            else:
-                query["height"] = {"$regex": h, "$options": "i"}
-
-        # Age range (safe parsing)
+    def clean_int(val_str):
+        if not val_str:
+            return None
         try:
-            if age_min:
-                query.setdefault("age", {})
-                query["age"]["$gte"] = int(age_min)
-            if age_max:
-                query.setdefault("age", {})
-                query["age"]["$lte"] = int(age_max)
+            return int(str(val_str).strip())
         except Exception:
-            # ignore age filter parse issues
-            pass
+            return None
 
-        # Salary range (safe parsing)
-        salary_min_i = None
-        salary_max_i = None
-        try:
-            if salary_min:
-                salary_min_i = int(salary_min)
-            if salary_max:
-                salary_max_i = int(salary_max)
-        except Exception:
-            salary_min_i = None
-            salary_max_i = None
+    age_min_i = clean_int(age_min)
+    age_max_i = clean_int(age_max)
+    salary_min_i = clean_int(salary_min)
+    salary_max_i = clean_int(salary_max)
 
-        if salary_min_i is not None or salary_max_i is not None:
-            salary_range = {}
+    filtered_profiles = []
+    for p in cursor:
+        if has_any_filter:
+            if religion:
+                p_rel = p.get("religion") or ""
+                if not re.search(religion, p_rel, re.IGNORECASE):
+                    continue
+            if profession:
+                p_prof = p.get("profession") or ""
+                if not re.search(profession, p_prof, re.IGNORECASE):
+                    continue
+            if city:
+                p_city = p.get("city") or ""
+                if not re.search(city, p_city, re.IGNORECASE):
+                    continue
+            if education:
+                p_edu = p.get("education") or ""
+                if not re.search(education, p_edu, re.IGNORECASE):
+                    continue
+            if mother_tongue:
+                p_mt = p.get("mother_tongue") or ""
+                if not re.search(mother_tongue, p_mt, re.IGNORECASE):
+                    continue
+            if height:
+                p_h = str(p.get("height") or "").strip()
+                try:
+                    if height.replace(".", "", 1).isdigit() and p_h.replace(".", "", 1).isdigit():
+                        if float(p_h) != float(height):
+                            continue
+                    else:
+                        if not re.search(height, p_h, re.IGNORECASE):
+                            continue
+                except Exception:
+                    if not re.search(height, p_h, re.IGNORECASE):
+                        continue
+
+            # Age filter (calls helper computing age from dob correctly if 'age' is absent)
+            p_age = _profile_age(p)
+            if age_min_i is not None and p_age < age_min_i:
+                continue
+            if age_max_i is not None and p_age > age_max_i:
+                continue
+
+            # Salary ranges (supporting various field schemas)
+            p_sal = p.get("annual_salary") or p.get("salary") or p.get("annualIncome")
+            try:
+                p_sal_i = int(p_sal) if p_sal not in (None, "") else None
+            except Exception:
+                p_sal_i = None
+
             if salary_min_i is not None:
-                salary_range["$gte"] = salary_min_i
+                if p_sal_i is None or p_sal_i < salary_min_i:
+                    continue
             if salary_max_i is not None:
-                salary_range["$lte"] = salary_max_i
+                if p_sal_i is None or p_sal_i > salary_max_i:
+                    continue
 
-            # Match either field.
-            query["$or"] = [
-                {"annual_salary": salary_range},
-                {"salary": salary_range},
-                {"annualIncome": salary_range},
-            ]
+        filtered_profiles.append(p)
 
-
-
-    # Fetch results
+    # Compute wishlisted, interested, connected sets for the current user
     pinned = users.database.get_collection("pinned")
     wishlist = users.database.get_collection("wishlist")
+    interests = users.database.get_collection("interests")
 
-    # Compute wishlisted set for this user
     wish_ids = wishlist.find({"user_id": user_oid}, {"profile_id": 1}).limit(200)
     wish_set = {w.get("profile_id") for w in wish_ids if w.get("profile_id")}
 
-    # Use a conservative limit for performance
-    cursor = users.find(query).limit(50)
+    interested_ids = interests.find({"from_user_id": user_oid, "status": "pending"}, {"to_user_id": 1}).limit(200)
+    interested_set = {i.get("to_user_id") for i in interested_ids if i.get("to_user_id")}
+
+    pinned_docs = pinned.find({"user_id": user_oid}, {"partner_id": 1}).limit(200)
+    pinned_set = {p.get("partner_id") for p in pinned_docs if p.get("partner_id")}
+    pinned_docs_rev = pinned.find({"partner_id": user_oid}, {"user_id": 1}).limit(200)
+    for p in pinned_docs_rev:
+        uid = p.get("user_id")
+        if uid:
+            pinned_set.add(uid)
 
     from .api_profiles import add_profile_fields
 
     profiles = []
-    for p in cursor:
+    for p in filtered_profiles[:50]:
         profile_id = p.get("_id")
         if not profile_id:
             continue
 
-        profiles.append(
-            {
-                **add_profile_fields(p),
-                "wishlisted": bool(profile_id in wish_set),
-                "interested": False,
-            }
-        )
+        formatted = add_profile_fields(p)
+        formatted.update({
+            "wishlisted": bool(profile_id in wish_set),
+            "interested": bool(profile_id in interested_set),
+            "connected": bool(profile_id in pinned_set),
+        })
+        profiles.append(formatted)
 
     return JsonResponse({"profiles": profiles})
 

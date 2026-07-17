@@ -7,29 +7,40 @@
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/auth.css' %}">
   <link rel="stylesheet" href="{% static 'css/edit_profile.css' %}">
+
 {% endblock %}
 
 {% block layout %}
 <div class="auth-view">
   <div class="auth-shell">
-    <!-- LEFT: Profile summary (simpler hero panel) -->
-    <aside class="auth-hero" style="justify-content: center; align-items: center; text-align: center; padding: 40px;">
+    <!-- LEFT: Profile summary with preview -->
+    <aside class="auth-hero">
       <div class="profile-summary">
-        <div class="avatar-xl" style="width: 100px; height: 100px; border-radius: 50%; background: {{ user.full_name|avatar_style }}; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #fff; font-weight: 700; margin: 0 auto 16px;">
-          {{ user.full_name|initials }}
+        <div class="avatar-preview" id="avatarPreview" style="
+          {% if request.session.profile_pic %}
+            background-image: url('{{ request.session.profile_pic }}');
+            background-size: cover;
+            background-position: center;
+          {% else %}
+            background: {{ user.full_name|avatar_style }};
+          {% endif %}
+        ">
+          {% if not request.session.profile_pic %}
+            {{ user.full_name|initials }}
+          {% endif %}
         </div>
-        <h2 style="font-family: var(--font-d); font-size: 1.8rem; color: #fff; margin-bottom: 4px;">{{ user.full_name }}</h2>
-        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem;">{{ user.email }}</p>
+        <h2 style="font-family: var(--font-d); font-size: 2rem; color: #fff; margin-bottom: 4px;">{{ user.full_name }}</h2>
+        <p style="color: rgba(255,255,255,0.8); font-size: 0.95rem;">{{ user.email }}</p>
         <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
-          <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem;">
+          <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff; padding: 4px 16px; border-radius: 40px; font-size: 0.75rem;">
             {% if user.gender == 'male' %}Groom{% elif user.gender == 'female' %}Bride{% else %}Member{% endif %}
           </span>
         </div>
-        <div style="margin-top: 30px; font-size: 0.85rem; color: rgba(255,255,255,0.6);">
+        <div style="margin-top: 28px; font-size: 0.85rem; color: rgba(255,255,255,0.6);">
           <p>Complete your profile to get better matches.</p>
           <div class="completion-bar" style="max-width: 200px; margin: 8px auto 0;">
             <div class="completion-bar__track" style="background: rgba(255,255,255,0.2);">
-              <div class="completion-bar__fill" style="width: 78%; background: var(--gold);"></div>
+              <div class="completion-bar__fill" style="width: {{ profile_completion_pct|default:78 }}%; background: var(--gold);"></div>
             </div>
           </div>
         </div>
@@ -37,23 +48,29 @@
     </aside>
 
     <!-- RIGHT: Edit form -->
-    <div class="auth-panel" style="padding: 30px 36px; align-items: flex-start;">
-      <div class="auth-panel-inner" style="max-width: 480px;">
-        <h2 style="font-family: var(--font-d); font-size: 2rem; margin: 0 0 4px; color: var(--maroon-dark);">Edit Profile</h2>
-        <p style="color: var(--text-2); margin-bottom: 24px; font-size: 0.9rem;">Update your details to find the perfect match.</p>
+    <div class="auth-panel">
+      <div class="auth-panel-inner" style="max-width: 100%;">
+        <h2 style="font-family: var(--font-d); font-size: 2.2rem; margin: 0 0 4px; color: var(--maroon-dark);">Edit Profile</h2>
+        <p style="color: var(--text-2); margin-bottom: 24px; font-size: 0.95rem;">Update your details to find the perfect match.</p>
 
         {% if messages %}
-          <div class="general-error show" style="margin-bottom: 16px;">
+          <div class="general-error show" style="margin-bottom: 16px; background: #fde8e8; padding: 12px 16px; border-radius: 12px; color: #b3261e;">
             {% for message in messages %}
               {{ message }}
             {% endfor %}
           </div>
         {% endif %}
 
-        <form method="post" class="vivah-form" enctype="multipart/form-data">
-          
-          
+        <form method="post" class="vivah-form" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:16px;">
           {% csrf_token %}
+
+          <div class="field">
+            <label for="profile_pic" style="font-weight:600;">Profile Picture</label>
+            <input type="file" id="profile_pic" name="profile_pic" accept="image/*" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:10px;" onchange="previewImage(event)">
+            <div style="margin-top:6px;">
+              <span style="font-size:0.8rem; color:var(--text-2);">Recommended: Square image, at least 300×300px</span>
+            </div>
+          </div>
 
           <div class="field-row">
             <div class="field">
@@ -109,33 +126,39 @@
             </div>
           </div>
 
-          <div class="field" style="margin-bottom: 14px;">
-            <label for="profile_pic">Profile Picture</label>
-            <input type="file" id="profile_pic" name="profile_pic" accept="image/*" style="width:100%;">
-            {% if user.profile_pic %}
-              <div style="margin-top: 8px;">
-                <img src="{{ user.profile_pic.url }}" alt="Current Profile Picture" style="max-width: 120px; border-radius: 8px; border: 1px solid var(--border);">
-              </div>
-            {% endif %}
-          </div>
-
           <div class="field">
             <label for="bio">About Me</label>
-            <textarea id="bio" name="bio" rows="4" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:var(--font-b);">{{ user.bio|default:'' }}</textarea>
+            <textarea id="bio" name="bio" rows="4" style="resize:vertical;">{{ user.bio|default:'' }}</textarea>
           </div>
 
-
-          <button type="submit" class="btn-primary" style="margin-top: 8px;">
-            <span class="btn-seal">वि</span>
+          <button type="submit" class="btn-primary">
+            <span class="btn-seal" style="font-size:1.2rem;">वि</span>
             Update Profile
           </button>
         </form>
 
-        <p style="margin-top: 20px; text-align: center; font-size: 0.9rem;">
-          <a href="{% url 'dashboard' %}" style="color: var(--maroon); font-weight: 600;">← Back to Dashboard</a>
+        <p style="margin-top: 20px; text-align: center; font-size: 0.95rem;">
+          <a href="{% url 'dashboard' %}" style="color: var(--maroon); font-weight: 600; text-decoration:none;">← Back to Dashboard</a>
         </p>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const preview = document.getElementById('avatarPreview');
+        preview.style.backgroundImage = `url(${e.target.result})`;
+        preview.style.backgroundSize = 'cover';
+        preview.style.backgroundPosition = 'center';
+        preview.innerHTML = ''; // remove initials
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+</script>
 {% endblock %}

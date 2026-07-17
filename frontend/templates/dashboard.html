@@ -12,7 +12,7 @@
     window.USER_ID = "{{ request.session.user_id|default:'' }}";
   </script>
 
-  <!-- NAVBAR -->
+  <!-- NAVBAR (unchanged) -->
   <header class="navbar">
     <div class="nav-left">
       <button class="hamburger" id="hamburgerBtn"><span></span><span></span><span></span></button>
@@ -97,7 +97,7 @@
     </div>
   </header>
 
-  <!-- SLIDE PANELS -->
+  <!-- SLIDE PANELS (unchanged) -->
   <div class="overlay" id="overlay"></div>
   <div class="slide-panel" id="notifPanel">
     <div class="slide-panel__header">
@@ -111,7 +111,6 @@
     </div>
   </div>
 
-  <!-- Chat panel (list only) -->
   <div class="slide-panel" id="chatPanel">
     <div class="slide-panel__header">
       <h3>Messages</h3>
@@ -204,11 +203,11 @@
     </div>
   </div>
 
-  <!-- APP SHELL -->
+  <!-- ─── APP SHELL (enhanced) ─── -->
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-profile">
-          <div class="sidebar-profile__photo-wrap">
+        <div class="sidebar-profile__photo-wrap">
           <div class="sidebar-profile__photo" style="{{ full_name|avatar_style }}; display:flex; align-items:center; justify-content:center; color:#fff; font-size:28px; font-weight:700; overflow:hidden;">
             {% if request.session.profile_pic %}
               <img src="{{ request.session.profile_pic }}" alt="Profile" style="width:100%;height:100%;object-fit:cover;display:block;" />
@@ -244,8 +243,7 @@
           <a href="#" class="sidebar-link" data-section="matches">Matches <span class="sidebar-link__count" id="matchesCount">0</span></a>
           <a href="#" class="sidebar-link" data-section="shortlisted">Shortlisted <span class="sidebar-link__count" id="shortlistedCount">0</span></a>
           <a href="#" class="sidebar-link" data-section="blocked">Blocked <span class="sidebar-link__count" id="blockedCount">0</span></a>
-
-          </div>
+        </div>
         <div class="sidebar-nav__group">
           <span class="sidebar-nav__label">Activity</span>
           <a href="#" class="sidebar-link" data-section="interests">Interests <span class="sidebar-link__count sidebar-link__count--red" id="sidebarInterestsCount">0</span></a>
@@ -260,22 +258,41 @@
     </aside>
 
     <main class="main-content" id="mainContent">
-      <div class="welcome-banner">
-        <h1>Welcome, {{ full_name|truncatechars:20 }}</h1>
-        <p>{% if user_gender == 'male' %}Here are bride profiles curated for you.{% else %}Here are groom profiles curated for you.{% endif %}</p>
-      </div>
-
-
-
-      <!-- Global Filter bar (visible on overview/search) -->
-      <div class="filter-bar" id="globalFilterBar">
-        <div class="filter-search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-          <input type="text" id="searchInput" placeholder="Search by name or profession..." value="{{ search }}">
+      <!-- ✦ NEW HERO BANNER ✦ -->
+      <div class="hero-banner" style="
+        background: linear-gradient(135deg, #6B1E3C 0%, #A54C6B 100%);
+        border-radius: 20px;
+        padding: 32px 40px;
+        margin-bottom: 28px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(107, 30, 60, 0.25);
+      ">
+        <div style="position: absolute; top: -60px; right: -40px; opacity: 0.1; font-size: 200px; line-height: 1;">✦</div>
+        <div style="position: absolute; bottom: -30px; left: 10%; opacity: 0.08; font-size: 120px;">वि</div>
+        <div style="position: relative; z-index: 1;">
+          <h1 style="font-family: var(--font-d); font-size: 2.4rem; margin: 0 0 6px; letter-spacing: 1px; text-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            Welcome, {{ full_name|truncatechars:20 }}
+          </h1>
+          <p style="font-size: 1.1rem; opacity: 0.9; margin: 0; text-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            {% if user_gender == 'male' %}🌸 Discover brides who match your values.{% else %}🌺 Discover grooms who share your dreams.{% endif %}
+          </p>
+          <div style="margin-top: 16px; display: flex; gap: 20px; flex-wrap: wrap;">
+            <span style="background: rgba(255,255,255,0.2); padding: 4px 18px; border-radius: 40px; font-size: 0.8rem; font-weight: 500;">{{ profiles|length }} matches</span>
+            <span style="background: rgba(255,255,255,0.2); padding: 4px 18px; border-radius: 40px; font-size: 0.8rem; font-weight: 500;">Premium member</span>
+          </div>
         </div>
-        <button class="filter-reset" id="searchBtn">Search</button>
       </div>
 
+      <!-- Global Filter bar (visual upgrade) -->
+      <div class="filter-bar" id="globalFilterBar" style="display:flex; gap:12px; background:var(--surface); padding:12px 20px; border-radius:60px; margin-bottom:28px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+        <div class="filter-search" style="flex:1; display:flex; align-items:center; gap:10px; background:var(--cream); border-radius:40px; padding:0 16px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" id="searchInput" placeholder="Search by name or profession..." value="{{ search }}" style="border:none; background:transparent; padding:10px 0; width:100%; outline:none; font-size:0.95rem;">
+        </div>
+        <button class="filter-reset" id="searchBtn" style="background:var(--maroon); color:#fff; border:none; padding:10px 28px; border-radius:40px; font-weight:600; cursor:pointer;">Search</button>
+      </div>
 
       <!-- Interests section -->
       <section class="interests-section" id="interestsSection" style="display:none;">
@@ -311,47 +328,66 @@
         </div>
       </section>
 
-      <!-- Main Profile Grid (overview, search, matches results) -->
+      <!-- Main Profile Grid (enhanced cards) -->
       <div class="profile-grid" id="profileGrid">
         {% for profile in profiles %}
-          <div class="profile-card" data-id="{{ profile.id }}" data-wishlisted="{% if profile.wishlisted %}true{% else %}false{% endif %}">
-            <div class="pc-head">
-              <div class="avatar-lg" style="{{ profile.full_name|avatar_style }}">{% if profile.profile_pic %}<img src="{{ profile.profile_pic }}" alt="{{ profile.full_name }}" style="width:100%;height:100%;border-radius:16px;object-fit:cover;display:block;" />{% else %}{{ profile.full_name|initials }}{% endif %}</div>
+          <div class="profile-card" data-id="{{ profile.id }}" data-wishlisted="{% if profile.wishlisted %}true{% else %}false{% endif %}" style="
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+            transition: all 0.25s ease;
+            border: 1px solid var(--border);
+            cursor: default;
+          ">
+            <div class="pc-head" style="display:flex; gap:14px; align-items:center; margin-bottom:14px;">
+              <div class="avatar-lg" style="
+                width: 60px; height: 60px; border-radius: 50%; overflow:hidden;
+                background: {{ profile.full_name|avatar_style }};
+                display: flex; align-items:center; justify-content:center;
+                color: #fff; font-weight:700; font-size:22px; flex-shrink:0;
+              ">
+                {% if profile.profile_pic %}
+                  <img src="{{ profile.profile_pic }}" alt="{{ profile.full_name }}" style="width:100%; height:100%; object-fit:cover; display:block;" />
+                {% else %}
+                  {{ profile.full_name|initials }}
+                {% endif %}
+              </div>
               <div>
-                <div class="pc-head-name">{{ profile.full_name }}, {{ profile.age }}
+                <div class="pc-head-name" style="font-weight:600; font-size:1.1rem;">
+                  {{ profile.full_name }}, {{ profile.age }}
                   {% if profile.verified %}
                     <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
                   {% endif %}
                 </div>
-                <div class="pc-head-sub">{{ profile.profession }} · {{ profile.city }}</div>
+                <div class="pc-head-sub" style="color:var(--text-2); font-size:0.9rem;">{{ profile.profession }} · {{ profile.city }}</div>
               </div>
             </div>
-            <div class="pc-tags">
-              <span class="pc-tag">{{ profile.religion }}</span>
-              <span class="pc-tag">{{ profile.height }}</span>
-              <span class="pc-tag">{{ profile.mother_tongue }}</span>
+            <div class="pc-tags" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+              <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">{{ profile.religion }}</span>
+              <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">{{ profile.height }}</span>
+              <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">{{ profile.mother_tongue }}</span>
             </div>
-            <div class="pc-bio">{{ profile.bio|truncatechars:80 }}</div>
-            <div class="pc-match">
-              <div class="pc-match-top"><span>Compatibility</span><span>{{ profile.compatibility }}%</span></div>
-              <div class="pc-match-track"><div class="pc-match-fill" style="width:{{ profile.compatibility }}%;"></div></div>
+            <div class="pc-bio" style="font-size:0.9rem; color:var(--text-2); margin-bottom:14px; line-height:1.5; height:44px; overflow:hidden;">{{ profile.bio|truncatechars:80 }}</div>
+            <div class="pc-match" style="margin-bottom:14px;">
+              <div class="pc-match-top" style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:500;"><span>Compatibility</span><span>{{ profile.compatibility }}%</span></div>
+              <div class="pc-match-track" style="height:4px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px;"><div class="pc-match-fill" style="width:{{ profile.compatibility }}%; height:100%; background:var(--gold);"></div></div>
             </div>
-            <div class="pc-actions">
-              <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="{{ profile.id }}" title="Add to shortlist">
-
+            <div class="pc-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="{{ profile.id }}" title="Add to shortlist" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 12px; cursor:pointer;">
                 <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="{% if profile.wishlisted %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2">
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
               </button>
-              <button class="pc-btn view" data-action="view" data-id="{{ profile.id }}">View</button>
-              <button class="pc-btn interest{% if profile.interested %} sent{% endif %}" data-action="interest" data-id="{{ profile.id }}">
+              <button class="pc-btn view" data-action="view" data-id="{{ profile.id }}" style="flex:1; background:var(--maroon); color:#fff; border:none; border-radius:40px; padding:8px 12px; font-weight:500; cursor:pointer;">View</button>
+              <button class="pc-btn interest{% if profile.interested %} sent{% endif %}" data-action="interest" data-id="{{ profile.id }}" style="flex:1; background:var(--gold); color:#fff; border:none; border-radius:40px; padding:8px 12px; font-weight:500; cursor:pointer;">
                 {% if profile.interested %}
                   Interest Sent
                 {% else %}
                   Send Interest
                 {% endif %}
               </button>
-              <button class="pc-btn block-btn" type="button" data-action="block" data-id="{{ profile.id }}" title="Block this person">
+              <button class="pc-btn block-btn" type="button" data-action="block" data-id="{{ profile.id }}" title="Block this person" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 10px; cursor:pointer;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 5a1 1 0 0 1 1 1v1"/>
                   <path d="M12 21l-8-8 8-8 8 8-8 8z"/>
@@ -361,9 +397,9 @@
             </div>
           </div>
         {% empty %}
-          <div class="empty-state">
+          <div class="empty-state" style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--text-2);">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-            <h3>No matches found</h3>
+            <h3 style="margin:16px 0 8px;">No matches found</h3>
             <p>Try adjusting your filters or search term.</p>
           </div>
         {% endfor %}
@@ -376,6 +412,7 @@
     <div class="modal-card" id="modalCard"></div>
   </div>
 
+  <!-- ======== JAVASCRIPT (unchanged) ======== -->
   <script>
   // ========== Dashboard JavaScript ==========
   (function() {
@@ -1083,6 +1120,79 @@
       document.getElementById('matchesModal').classList.remove('open');
     }
 
+    function makeProfileCardHtml(p) {
+      const verified = p.verified ? `
+        <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
+      ` : '';
+
+      const avatarContent = p.profile_pic 
+        ? `<img src="${escHtml(p.profile_pic)}" alt="${escHtml(p.full_name)}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
+        : escHtml(p.initials || '');
+      
+      const avatarStyle = p.profile_pic
+        ? `width:60px; height:60px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;`
+        : `width:60px; height:60px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0; ${p.avatar_style || ''} color:#fff; font-weight:700; font-size:22px;`;
+
+      let interestBtnHtml = '';
+      if (p.connected) {
+        interestBtnHtml = `<button class="pc-btn interest connected" data-action="interest" data-id="${escHtml(p.id)}" disabled style="flex:1; background:#E7F3EC; color:#3F7A5D; border:1px solid #3F7A5D; border-radius:40px; padding:8px 12px; font-weight:500; opacity:.7; cursor:not-allowed;">Connected</button>`;
+      } else if (p.interested) {
+        interestBtnHtml = `<button class="pc-btn interest sent" data-action="interest" data-id="${escHtml(p.id)}" style="flex:1; background:#E7F3EC; color:#3F7A5D; border:1.5px solid #3F7A5D; border-radius:40px; padding:8px 12px; font-weight:500; cursor:pointer;">Interest Sent</button>`;
+      } else {
+        interestBtnHtml = `<button class="pc-btn interest" data-action="interest" data-id="${escHtml(p.id)}" style="flex:1; background:var(--gold); color:#fff; border:none; border-radius:40px; padding:8px 12px; font-weight:500; cursor:pointer;">Send Interest</button>`;
+      }
+
+      return `
+        <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}" style="
+          background: var(--surface);
+          border-radius: 20px;
+          padding: 20px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+          transition: all 0.25s ease;
+          border: 1px solid var(--border);
+          cursor: default;
+        ">
+          <div class="pc-head" style="display:flex; gap:14px; align-items:center; margin-bottom:14px;">
+            <div class="avatar-lg" style="${avatarStyle}">
+              ${avatarContent}
+            </div>
+            <div>
+              <div class="pc-head-name" style="font-weight:600; font-size:1.1rem;">
+                ${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}
+              </div>
+              <div class="pc-head-sub" style="color:var(--text-2); font-size:0.9rem;">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+            </div>
+          </div>
+          <div class="pc-tags" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">${escHtml(p.religion || '')}</span>
+            <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">${escHtml(p.height || '')}</span>
+            <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">${escHtml(p.mother_tongue || '')}</span>
+          </div>
+          <div class="pc-bio" style="font-size:0.9rem; color:var(--text-2); margin-bottom:14px; line-height:1.5; height:44px; overflow:hidden;">${escHtml(p.bio || '').slice(0, 80)}</div>
+          <div class="pc-match" style="margin-bottom:14px;">
+            <div class="pc-match-top" style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:500;"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
+            <div class="pc-match-track" style="height:4px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px;"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%; height:100%; background:var(--gold);"></div></div>
+          </div>
+          <div class="pc-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 12px; cursor:pointer;">
+              <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </button>
+            <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}" style="flex:1; background:var(--maroon); color:#fff; border:none; border-radius:40px; padding:8px 12px; font-weight:500; cursor:pointer;">View</button>
+            ${interestBtnHtml}
+            <button class="pc-btn block-btn" type="button" data-action="block" data-id="${escHtml(p.id)}" title="Block this person" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 10px; cursor:pointer;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5a1 1 0 0 1 1 1v1"/>
+                <path d="M12 21l-8-8 8-8 8 8-8 8z"/>
+                <line x1="7" y1="7" x2="17" y2="17"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     // Apply filters and update main profile grid
     async function applyMatchesFilters(formData) {
       const params = new URLSearchParams();
@@ -1090,7 +1200,7 @@
         if (value) params.append(key, value);
       }
       try {
-        const res = await fetch(`/api/profiles/?${params.toString()}`);
+        const res = await fetch(`/profiles/?${params.toString()}`);
         const data = await res.json();
         const grid = document.getElementById('profileGrid');
         if (!grid) return;
@@ -1106,43 +1216,7 @@
             </div>
           `;
         } else {
-          grid.innerHTML = profiles.map(p => {
-            const verified = p.verified ? `
-              <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
-            ` : '';
-            return `
-              <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}">
-                <div class="pc-head">
-                  <div class="avatar-lg" style="${p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
-                  <div>
-                    <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
-                    <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
-                  </div>
-                </div>
-                <div class="pc-tags">
-                  <span class="pc-tag">${escHtml(p.religion || '')}</span>
-                  <span class="pc-tag">${escHtml(p.height || '')}</span>
-                  <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
-                </div>
-                <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
-                <div class="pc-match">
-                  <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
-                  <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
-                </div>
-                <div class="pc-actions">
-                  <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist">
-                    <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                    </svg>
-                  </button>
-                  <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}">View</button>
-                  <button class="pc-btn interest${p.interested ? ' sent' : ''}" data-action="interest" data-id="${escHtml(p.id)}">
-                    ${p.interested ? 'Interest Sent' : 'Send Interest'}
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join('');
+          grid.innerHTML = profiles.map(p => makeProfileCardHtml(p)).join('');
         }
 
         // Update match count
@@ -1185,11 +1259,13 @@
         if (profileGrid) profileGrid.style.display = 'none';
         if (globalFilter) globalFilter.style.display = 'flex';
         loadInterests();
+        syncMainButtons();
       } else if (section === 'shortlisted') {
         if (shortlistedSection) shortlistedSection.style.display = 'block';
         if (profileGrid) profileGrid.style.display = 'none';
         if (globalFilter) globalFilter.style.display = 'none';
         loadShortlisted();
+        syncMainButtons();
       } else if (section === 'blocked') {
         // Show blocked profiles using the same profile grid
         if (interestsSection) interestsSection.style.display = 'none';
@@ -1227,6 +1303,8 @@
         }
 
         showSection(section);
+        // Cards may have been re-rendered; always sync button states from server.
+        syncMainButtons();
       });
     });
 
@@ -1361,44 +1439,7 @@
         return;
       }
 
-      grid.innerHTML = profiles.map(p => {
-        const verified = p.verified ? `
-          <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
-        ` : '';
-
-        return `
-          <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}">
-            <div class="pc-head">
-              <div class="avatar-lg" style="${p.profile_pic ? `background-image:url(\\\"${escHtml(p.profile_pic)}\\\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase())}</div>
-              <div>
-                <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
-                <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
-              </div>
-            </div>
-            <div class="pc-tags">
-              <span class="pc-tag">${escHtml(p.religion || '')}</span>
-              <span class="pc-tag">${escHtml(p.height || '')}</span>
-              <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
-            </div>
-            <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
-            <div class="pc-match">
-              <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
-              <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
-            </div>
-            <div class="pc-actions">
-              <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist">
-                <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                </svg>
-              </button>
-              <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}">View</button>
-              <button class="pc-btn interest${p.interested ? ' sent' : ''}" data-action="interest" data-id="${escHtml(p.id)}">
-                ${p.interested ? 'Interest Sent' : 'Send Interest'}
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
+      grid.innerHTML = profiles.map(p => makeProfileCardHtml(p)).join('');
 
       // keep sidebar UI counts accurate
       syncMainButtons();
@@ -1411,7 +1452,7 @@
         if (search) params.set('search', search);
 
         // Fetch filtered profiles and render without page reload
-        const res = await fetch(`/api/profiles/?${params.toString()}`);
+        const res = await fetch(`/profiles/?${params.toString()}`);
         const data = await res.json();
         renderProfiles(data.profiles || []);
       } catch (e) {
@@ -1451,4 +1492,15 @@
 {# ─── LOAD DASHBOARD CSS ─── #}
 {% block extra_css %}
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+  <style>
+    /* Additional polish for cards and hover */
+    .profile-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+      border-color: var(--gold);
+    }
+    .hero-banner h1, .hero-banner p {
+      text-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+  </style>
 {% endblock %}

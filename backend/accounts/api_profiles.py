@@ -73,6 +73,31 @@ def _profile_age(profile_doc: Dict[str, Any]) -> int:
     return computed if computed is not None else 0
 
 
+def _avatar_style(name: str) -> str:
+    colors = [
+        ('#6B1E3C', '#C9972E'),
+        ('#8A2A4E', '#E8C170'),
+        ('#45142A', '#C9972E'),
+        ('#7A2348', '#D4A85B'),
+        ('#5C1832', '#CBA24B'),
+        ('#6B1E3C', '#B98A3A')
+    ]
+    if not name:
+        name = "Guest"
+    idx = sum(ord(c) for c in name) % len(colors)
+    c1, c2 = colors[idx]
+    return f'background: linear-gradient(135deg, {c1}, {c2});'
+
+
+def _initials(value: str) -> str:
+    if not value:
+        return "?"
+    parts = value.strip().split()
+    if len(parts) == 1:
+        return parts[0][0].upper()
+    return (parts[0][0] + parts[-1][0]).upper()
+
+
 def add_profile_fields(profile_doc: Dict[str, Any], *, compatibility_default: int = 70) -> Dict[str, Any]:
     """Return JSON-serializable profile dict matching dashboard.html expectations."""
 
@@ -97,7 +122,16 @@ def add_profile_fields(profile_doc: Dict[str, Any], *, compatibility_default: in
         "compatibility": compatibility,
         "wishlisted": bool(profile_doc.get("wishlisted", False)),
         "interested": bool(profile_doc.get("interested", False)),
-        "profile_pic": profile_doc.get("profile_pic"),
+        "connected": bool(profile_doc.get("connected", False)),
+        "avatar_style": _avatar_style(full_name),
+        "initials": _initials(full_name),
+        "profile_pic": (
+            profile_doc.get("profile_pic")
+            and profile_doc.get("profile_pic_content_type")
+            and ("data:" + profile_doc.get("profile_pic_content_type") + ";base64," + profile_doc.get("profile_pic"))
+            or None
+        ),
     }
+
 
 
