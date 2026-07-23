@@ -10,7 +10,9 @@
   <script>window.CSRF_TOKEN = document.getElementById('csrfToken').textContent.trim();</script>
   <script>
     window.USER_ID = "{{ request.session.user_id|default:'' }}";
+    window.FILTERS_APPLIED = {{ filters_applied|yesno:"true,false" }};
   </script>
+
 
   <!-- NAVBAR (unchanged) -->
   <header class="navbar">
@@ -67,7 +69,7 @@
 
         <div class="nav-profile__info">
           <span class="nav-profile__name">{{ full_name|truncatechars:12 }}</span>
-          <span class="nav-profile__plan">Premium</span>
+          <span class="nav-profile__plan" id="navPremiumPlanLabel">Premium</span>
         </div>
         <svg class="nav-profile__caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
 
@@ -87,8 +89,8 @@
           </div>
 
           <hr class="dropdown-divider" />
-          <a href="{% url 'edit_profile_root' %}" class="dropdown-item">My Profile</a>
-          <a href="#" class="dropdown-item">Subscription</a>
+          <a href="{% url 'edit_profile' %}" class="dropdown-item">My Profile</a>
+          <a href="#" class="dropdown-item" id="navbarSubscriptionLink">Subscription</a>
           <a href="#" class="dropdown-item">Settings</a>
           <hr class="dropdown-divider" />
           <a href="{% url 'logout' %}" class="dropdown-item dropdown-item--danger" id="dashboardLogoutBtn">Logout</a>
@@ -369,10 +371,13 @@
               <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">{{ profile.mother_tongue }}</span>
             </div>
             <div class="pc-bio" style="font-size:0.9rem; color:var(--text-2); margin-bottom:14px; line-height:1.5; height:44px; overflow:hidden;">{{ profile.bio|truncatechars:80 }}</div>
-            <div class="pc-match" style="margin-bottom:14px;">
-              <div class="pc-match-top" style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:500;"><span>Compatibility</span><span>{{ profile.compatibility }}%</span></div>
-              <div class="pc-match-track" style="height:4px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px;"><div class="pc-match-fill" style="width:{{ profile.compatibility }}%; height:100%; background:var(--gold);"></div></div>
-            </div>
+            {% if filters_applied %}
+              <div class="pc-match" style="margin-bottom:14px;">
+                <div class="pc-match-top" style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:500;"><span>Compatibility</span><span>{{ profile.compatibility }}%</span></div>
+                <div class="pc-match-track" style="height:4px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px;"><div class="pc-match-fill" style="width:{{ profile.compatibility }}%; height:100%; background:var(--gold);"></div></div>
+              </div>
+            {% endif %}
+
             <div class="pc-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="{{ profile.id }}" title="Add to shortlist" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 12px; cursor:pointer;">
                 <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="{% if profile.wishlisted %}currentColor{% else %}none{% endif %}" stroke="currentColor" stroke-width="2">
@@ -387,11 +392,11 @@
                   Send Interest
                 {% endif %}
               </button>
+              <!-- ✦ MODIFIED BLOCK BUTTON – circle with diagonal slash ✦ -->
               <button class="pc-btn block-btn" type="button" data-action="block" data-id="{{ profile.id }}" title="Block this person" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 10px; cursor:pointer;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 5a1 1 0 0 1 1 1v1"/>
-                  <path d="M12 21l-8-8 8-8 8 8-8 8z"/>
-                  <line x1="7" y1="7" x2="17" y2="17"/>
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
                 </svg>
               </button>
             </div>
@@ -412,9 +417,131 @@
     <div class="modal-card" id="modalCard"></div>
   </div>
 
-  <!-- ======== JAVASCRIPT (unchanged) ======== -->
+  <!-- ─── Subscription Modal ─── -->
+  <div class="modal-overlay" id="subscriptionModal">
+    <div class="modal-card" style="max-width:720px; width:100%;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
+        <div>
+          <h3 style="font-family:var(--font-d); font-size:1.45rem; margin:0;">Upgrade to Premium</h3>
+          <div style="color:var(--text-2); font-size:0.95rem; margin-top:4px;">Unlock unrestricted chat + premium member access</div>
+        </div>
+        <button class="modal-close" id="subscriptionModalClose" aria-label="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div style="display:flex; gap:18px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:280px;">
+          <div style="background:var(--cream); border:1px solid var(--border); border-radius:16px; padding:16px;">
+            <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">Premium Benefits</div>
+            <ul style="margin:0; padding-left:18px; color:var(--text-2); line-height:1.8;">
+              <li>Send messages to any profile on the platform</li>
+              <li>Chat works even without connection/match</li>
+              <li>Unrestricted access to messages</li>
+            </ul>
+          </div>
+
+          <div style="margin-top:14px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px;">
+            <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">Plan Details</div>
+            <div style="color:var(--text-2); line-height:1.6;">
+              <div><strong style="color:var(--text);">Premium Membership</strong></div>
+              <div>Instant activation after successful OTP verification (PhonePe).</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1; min-width:280px;">
+          <div style="border:1px solid var(--border); border-radius:16px; padding:16px; background:var(--cream);">
+            <div style="font-weight:800; font-size:1.05rem; margin-bottom:10px;">Payment Methods</div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+              <button type="button" class="pc-btn" id="pmCredit" style="background:var(--surface); border:1px solid var(--border); color:var(--text);">Credit Card</button>
+              <button type="button" class="pc-btn" id="pmDebit" style="background:var(--surface); border:1px solid var(--border); color:var(--text);">Debit Card</button>
+              <button type="button" class="pc-btn" id="pmPhonePe" style="background:var(--surface); border:1px solid var(--border); color:var(--text);">PhonePe</button>
+            </div>
+
+            <!-- Credit/Debit placeholders -->
+            <div id="paymentCardPlaceholder" style="color:var(--text-2); line-height:1.6;">
+              Select PhonePe to complete subscription via OTP verification.
+            </div>
+
+            <!-- PhonePe OTP flow -->
+            <div id="paymentPhonePeSection" style="display:none;">
+              <div style="font-weight:800; margin-bottom:8px; color:var(--text);">PhonePe OTP Verification</div>
+              <div style="color:var(--text-2); line-height:1.6; margin-bottom:14px;">
+                OTP will be sent to your Gmail registered with your account.
+              </div>
+
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <button type="button" class="pc-btn view" id="sendPhonePeOtpBtn" style="border-radius:12px;">Send OTP</button>
+                <span id="otpStatusText" style="color:var(--text-2); font-size:0.95rem;"></span>
+              </div>
+
+              <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <input id="phonepeOtpInput" type="text" inputmode="numeric" placeholder="Enter 6-digit OTP" maxlength="6" style="flex:1; min-width:200px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text);" />
+                <button type="button" class="pc-btn view" id="verifyPhonePeOtpBtn" style="border-radius:12px;">Verify OTP</button>
+              </div>
+
+              <div id="phonePeError" style="margin-top:10px; color:var(--maroon); font-weight:700;"></div>
+            </div>
+
+            <div id="subscriptionSuccess" style="display:none; margin-top:14px; color:var(--maroon-dark); font-weight:800;">
+              Subscription Successful! Welcome to Premium Membership.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; color:var(--text-2); font-size:0.9rem; line-height:1.6;">
+        Note: PhonePe OTP expires after 5 minutes.
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== JAVASCRIPT (subscription + rest) ======== -->
   <script>
   // ========== Dashboard JavaScript ==========
+
+  // Subscription modal helpers
+  function selectPaymentMethod(method) {
+    const creditBtn = document.getElementById('pmCredit');
+    const debitBtn = document.getElementById('pmDebit');
+    const phonePeBtn = document.getElementById('pmPhonePe');
+
+    const isPhonePe = method === 'phonepe';
+
+    // Toggle visual selection (simple)
+    [creditBtn, debitBtn, phonePeBtn].forEach(b => {
+      if (!b) return;
+      b.style.outline = '';
+      b.style.boxShadow = '';
+    });
+    if (phonePeBtn && isPhonePe) {
+      phonePeBtn.style.outline = '2px solid var(--gold)';
+      phonePeBtn.style.boxShadow = '0 0 0 4px rgba(207,153,36,0.18)';
+    }
+    if (creditBtn && method === 'credit') {
+      creditBtn.style.outline = '2px solid var(--gold)';
+      creditBtn.style.boxShadow = '0 0 0 4px rgba(207,153,36,0.18)';
+    }
+    if (debitBtn && method === 'debit') {
+      debitBtn.style.outline = '2px solid var(--gold)';
+      debitBtn.style.boxShadow = '0 0 0 4px rgba(207,153,36,0.18)';
+    }
+
+    const phonePeSection = document.getElementById('paymentPhonePeSection');
+    const placeholder = document.getElementById('paymentCardPlaceholder');
+    if (phonePeSection) phonePeSection.style.display = isPhonePe ? 'block' : 'none';
+    if (placeholder) placeholder.style.display = isPhonePe ? 'none' : 'block';
+
+    const errEl = document.getElementById('phonePeError');
+    if (errEl) errEl.textContent = '';
+    const statusEl = document.getElementById('otpStatusText');
+    if (statusEl) statusEl.textContent = '';
+    const successEl = document.getElementById('subscriptionSuccess');
+    if (successEl) successEl.style.display = 'none';
+  }
+
   (function() {
     // Toast
     function showToast(msg, type) {
@@ -564,6 +691,11 @@
               headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
               body: JSON.stringify({})
             });
+
+            // If this profile becomes connected after accepting, remove it from interests list immediately.
+            // Server-driven refresh via loadInterests() will also handle it on next poll.
+            const interestsCard = document.querySelector(`#interestsGrid .profile-card[data-id="${escHtml(profileId)}"]`);
+            interestsCard?.remove();
             showToast('Request accepted', 'success');
             loadNotifications();
             loadConversations();
@@ -813,9 +945,9 @@
           grid.innerHTML = `
             <div class="empty-state" style="padding:40px 0;">
               <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              <h3>No shortlisted profiles</h3>
-              <p>Click the heart icon on a profile to add it here.</p>
-            </div>
+            <h3>No shortlisted profiles</h3>
+            <p>Click the heart icon on a profile to add it here.</p>
+          </div>
           `;
           return;
         }
@@ -880,12 +1012,18 @@
           const cardBtn = document.querySelector(`.profile-card[data-id="${profileId}"] .interest`);
           if (cardBtn) {
             cardBtn.textContent = 'Connected';
-            cardBtn.classList.remove('sent');
+            cardBtn.disabled = true;
+            cardBtn.classList.add('sent');
+            cardBtn.style.opacity = '.7';
+            cardBtn.style.cursor = 'not-allowed';
           }
           const modalBtn = document.querySelector('#modalCard .interest');
           if (modalBtn) {
             modalBtn.textContent = 'Connected';
-            modalBtn.classList.remove('sent');
+            modalBtn.disabled = true;
+            modalBtn.classList.add('sent');
+            modalBtn.style.opacity = '.7';
+            modalBtn.style.cursor = 'not-allowed';
           }
           if (callback) callback(true);
           return;
@@ -939,24 +1077,81 @@
               <div class="modal-detail"><span>Compatibility</span><strong>${data.compatibility}%</strong></div>
             </div>
             <div class="modal-bio">${data.bio}</div>
-            <div class="modal-actions">
+              <div class="modal-actions">
               <button class="pc-btn view" id="modalMessageBtn">Message</button>
-              <button class="pc-btn interest${data.interested ? ' sent' : ''}" data-action="modalInterest" data-id="${data.id}">
+              <button class="pc-btn interest" id="modalInterestBtn" data-action="modalInterest" data-id="${data.id}">
                 ${data.interested ? 'Interest Sent' : 'Send Interest'}
               </button>
+              <button class="pc-btn interest" id="modalDisconnectBtn" data-action="modalDisconnect" data-id="${data.id}" style="background:transparent; border:1px solid var(--border); color:var(--maroon);">
+                Disconnect
+              </button>
             </div>
+
+
           `;
           document.getElementById('profileModal').classList.add('open');
 
           document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
-          document.getElementById('modalMessageBtn').addEventListener('click', () => showToast('Chat coming soon.'));
-          document.querySelector('#modalCard .interest').addEventListener('click', function() {
+          document.getElementById('modalMessageBtn').addEventListener('click', async () => {
+            const res = await fetch(`/connection-status/${data.id}/`, { method: 'GET' });
+            const st = await res.json();
+            if (st.state === 'connected') {
+              showToast('Opening chat...', 'success');
+              // You already have a chat system via chat modal; just open it here.
+              openPanel('chatPanel');
+              loadConversations();
+            } else {
+              showToast('Connect first to message.', 'error');
+            }
+          });
+
+          const interestBtn = document.querySelector('#modalCard #modalInterestBtn');
+          const disconnectBtn = document.querySelector('#modalCard #modalDisconnectBtn');
+
+          // Determine connected state from DB on modal open.
+          (async () => {
+            const res = await fetch(`/connection-status/${data.id}/`, { method: 'GET' });
+            const st = await res.json();
+            if (st.state === 'connected') {
+              interestBtn.style.display = 'none';
+              disconnectBtn.style.display = 'inline-flex';
+            } else {
+              disconnectBtn.style.display = 'none';
+              interestBtn.style.display = 'inline-flex';
+            }
+          })();
+
+          disconnectBtn.addEventListener('click', async function() {
+            const pid = this.dataset.id;
+            const ok = window.confirm('Are you sure you want to disconnect?');
+            if (!ok) return;
+            const res = await fetch(`/disconnect/${pid}/`, {
+              method: 'POST',
+              headers: { 'X-CSRFToken': csrftoken, 'Content-Type': 'application/json' },
+              body: JSON.stringify({}),
+            });
+            const out = await res.json();
+            if (out.disconnected) {
+              showToast('Disconnected', 'success');
+              closeModal();
+              // Remove from main cards immediately.
+              document.querySelectorAll(`#profileGrid .profile-card[data-id="${pid}"]`).forEach(el => el.remove());
+              document.querySelectorAll(`#interestsGrid .profile-card[data-id="${pid}"]`).forEach(el => el.remove());
+              document.querySelectorAll(`#shortlistedGrid .profile-card[data-id="${pid}"]`).forEach(el => el.remove());
+              syncMainButtons();
+            } else {
+              showToast('Disconnect failed', 'error');
+            }
+          });
+
+          interestBtn.addEventListener('click', function() {
             const id = this.dataset.id;
             toggleInterest(id, (newState) => {
               this.textContent = newState ? 'Interest Sent' : 'Send Interest';
               this.classList.toggle('sent', newState);
             });
           });
+
         })
         .catch(() => showToast('Error loading profile', 'error'));
     }
@@ -968,22 +1163,65 @@
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
+    // ─── Subscription modal (opens only for non-premium users) ───
+    const navbarSubLink = document.getElementById('navbarSubscriptionLink');
+    function openSubscriptionModal() {
+      const modal = document.getElementById('subscriptionModal');
+      if (!modal) {
+        showToast('Subscription popup is not ready yet.', 'error');
+        return;
+      }
+      // Force visibility even if CSS 'open' class isn't styled.
+      modal.style.display = 'block';
+      modal.classList.add('open');
+    }
+
+
+    async function checkPremiumAndHandleSubscriptionClick(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      try {
+        const res = await fetch('/subscription/status/', { method: 'GET' });
+        const data = await res.json();
+        if (data?.is_premium) {
+          showToast('You are already a Premium Member.', 'success');
+          return;
+        }
+        openSubscriptionModal();
+      } catch (err) {
+        // Without backend endpoint, allow user to see something instead of doing nothing
+        openSubscriptionModal();
+      }
+    }
+
+    navbarSubLink?.addEventListener('click', checkPremiumAndHandleSubscriptionClick);
+
+
     // ─── Sync main buttons (interest status) ───
     async function syncMainButtons() {
       try {
         const cards = document.querySelectorAll('#profileGrid .profile-card[data-id]');
         for (const card of cards) {
           const profileId = card.dataset.id;
+          if (!profileId || profileId.length < 10) continue;
           const btn = card.querySelector('button[data-action="interest"]');
           if (!btn) continue;
+
+          // Defensive: ensure profileId is a valid ObjectId hex string (24 chars)
+          if (!/^[a-f0-9]{24}$/i.test(profileId)) {
+            continue;
+          }
 
           const res = await fetch(`/connection-status/${profileId}/`, { method: 'GET' });
           const data = await res.json();
           if (data.state === 'connected') {
             btn.textContent = 'Connected';
-            btn.disabled = false;
-            btn.style.opacity = '';
-            btn.style.cursor = '';
+            btn.disabled = true;
+            btn.classList.add('sent');
+            btn.style.opacity = '.7';
+            btn.style.cursor = 'not-allowed';
 
           } else if (data.state === 'pending') {
             btn.textContent = 'Interest Sent';
@@ -1044,8 +1282,8 @@
                 <button class="pc-btn view" type="button" data-action="view" data-id="${escHtml(p.id)}">View</button>
                 <button class="pc-btn block-btn" type="button" data-action="block" data-id="${escHtml(p.id)}" title="Unblock">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M6 6l12 12"/>
-                    <path d="M18 6L6 18"/>
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
                   </svg>
                 </button>
               </div>
@@ -1069,28 +1307,55 @@
           const verified = p.verified ? `
             <span class="verified-badge" title="Verified"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></span>
           ` : '';
+
+          const initials = escHtml((p.full_name || '').split(' ').map(w => w[0]).join('').toUpperCase());
+
+          // Build avatar style similar to dashboard cards: use avatar_style for initials background
+          const avatarInitialsStyle = `width:60px; height:60px; border-radius:50%; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:22px; ${p.avatar_style || 'background:var(--maroon-tint);'}`;
+          const avatarImgStyle = `width:60px; height:60px; border-radius:50%; overflow:hidden; flex-shrink:0;`;
+
+          // Make Interests cards match the same look as dashboard profile cards.
+          // Note: "Send Interest" button is intentionally removed per requirements.
           return `
-            <div class="profile-card" data-id="${escHtml(p.id)}" style="cursor:default;">
-              <div class="pc-head">
-                <div class="avatar-lg" style="${p.profile_pic_is_profile_pic && p.profile_pic ? `background-image:url(\"${escHtml(p.profile_pic)}\"); background-size:cover; background-position:center;` : ''}">${escHtml((p.full_name || '').split(' ').map(w=>w[0]).join('').toUpperCase() )}</div>
+            <div class="profile-card" data-id="${escHtml(p.id)}" data-wishlisted="${p.wishlisted ? 'true' : 'false'}" style="
+              background: var(--surface);
+              border-radius: 20px;
+              padding: 20px;
+              box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+              transition: all 0.25s ease;
+              border: 1px solid var(--border);
+              cursor: default;
+            ">
+              <div class="pc-head" style="display:flex; gap:14px; align-items:center; margin-bottom:14px;">
+                <div class="avatar-lg" style="${p.profile_pic ? avatarImgStyle : avatarInitialsStyle}">
+                  ${p.profile_pic
+                    ? `<img src="${escHtml(p.profile_pic)}" alt="${escHtml(p.full_name || '')}" style="width:100%; height:100%; object-fit:cover; display:block;" />`
+                    : initials}
+                </div>
                 <div>
-                  <div class="pc-head-name">${escHtml(p.full_name)}, ${escHtml(p.age || '')} ${verified}</div>
-                  <div class="pc-head-sub">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
+                  <div class="pc-head-name" style="font-weight:600; font-size:1.1rem;">
+                    ${escHtml(p.full_name || '')}, ${escHtml(p.age || '')} ${verified}
+                  </div>
+                  <div class="pc-head-sub" style="color:var(--text-2); font-size:0.9rem;">${escHtml(p.profession || '')} · ${escHtml(p.city || '')}</div>
                 </div>
               </div>
-              <div class="pc-tags">
-                <span class="pc-tag">${escHtml(p.religion || '')}</span>
-                <span class="pc-tag">${escHtml(p.height || '')}</span>
-                <span class="pc-tag">${escHtml(p.mother_tongue || '')}</span>
+
+              <div class="pc-tags" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+                <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">${escHtml(p.religion || '')}</span>
+                <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">${escHtml(p.height || '')}</span>
+                <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">${escHtml(p.mother_tongue || '')}</span>
               </div>
-              <div class="pc-bio">${escHtml(p.bio || '').slice(0, 80)}</div>
-              <div class="pc-match">
-                <div class="pc-match-top"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
-                <div class="pc-match-track"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%;"></div></div>
+
+              <div class="pc-bio" style="font-size:0.9rem; color:var(--text-2); margin-bottom:14px; line-height:1.5; height:44px; overflow:hidden;">${escHtml(p.bio || '').slice(0, 80)}</div>
+
+              <div class="pc-match" style="margin-bottom:14px;">
+                <div class="pc-match-top" style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:500;"><span>Compatibility</span><span>${escHtml(p.compatibility || 0)}%</span></div>
+                <div class="pc-match-track" style="height:4px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px;"><div class="pc-match-fill" style="width:${escHtml(p.compatibility || 0)}%; height:100%; background:var(--gold);"></div></div>
               </div>
-              <div class="pc-actions">
-                <button class="pc-btn view" type="button" data-action="view" data-id="${escHtml(p.id)}">View</button>
-                <button class="pc-btn" type="button" disabled style="opacity:.7;cursor:not-allowed;">Connected</button>
+
+              <div class="pc-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="pc-btn view" type="button" data-action="view" data-id="${escHtml(p.id)}" style="flex:1; background:var(--maroon); color:#fff; border:none; border-radius:40px; padding:8px 12px; font-weight:500; cursor:pointer;">View</button>
+                <button class="pc-btn interest sent" type="button" disabled style="flex:1; background:var(--gold); color:#fff; border:none; border-radius:40px; padding:8px 12px; font-weight:500; opacity:.7; cursor:not-allowed;">Connected</button>
               </div>
             </div>
           `;
@@ -1106,9 +1371,11 @@
           `;
           return;
         }
+
         grid.innerHTML = cards;
       } catch (e) { /* ignore */ }
     }
+
 
     // ─── Matches advanced filter (popup) ───
     // Open matches modal
@@ -1169,10 +1436,13 @@
             <span class="pc-tag" style="background:var(--maroon-tint); color:var(--maroon-dark); padding:4px 12px; border-radius:20px; font-size:0.75rem;">${escHtml(p.mother_tongue || '')}</span>
           </div>
           <div class="pc-bio" style="font-size:0.9rem; color:var(--text-2); margin-bottom:14px; line-height:1.5; height:44px; overflow:hidden;">${escHtml(p.bio || '').slice(0, 80)}</div>
+          ${window.FILTERS_APPLIED ? `
           <div class="pc-match" style="margin-bottom:14px;">
             <div class="pc-match-top" style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:500;"><span>Compatibility</span><span>${escHtml(p.compatibility)}%</span></div>
             <div class="pc-match-track" style="height:4px; background:var(--border); border-radius:4px; overflow:hidden; margin-top:4px;"><div class="pc-match-fill" style="width:${escHtml(p.compatibility)}%; height:100%; background:var(--gold);"></div></div>
           </div>
+        ` : ''}
+
           <div class="pc-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="pc-btn wishlist-btn" data-action="wishlist" data-id="${escHtml(p.id)}" title="Add to shortlist" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 12px; cursor:pointer;">
               <svg class="heart-icon" width="18" height="18" viewBox="0 0 24 24" fill="${p.wishlisted ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
@@ -1181,11 +1451,11 @@
             </button>
             <button class="pc-btn view" data-action="view" data-id="${escHtml(p.id)}" style="flex:1; background:var(--maroon); color:#fff; border:none; border-radius:40px; padding:8px 12px; font-weight:500; cursor:pointer;">View</button>
             ${interestBtnHtml}
+            <!-- ✦ MODIFIED BLOCK BUTTON – circle with diagonal slash ✦ -->
             <button class="pc-btn block-btn" type="button" data-action="block" data-id="${escHtml(p.id)}" title="Block this person" style="background:transparent; border:1px solid var(--border); border-radius:40px; padding:8px 10px; cursor:pointer;">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 5a1 1 0 0 1 1 1v1"/>
-                <path d="M12 21l-8-8 8-8 8 8-8 8z"/>
-                <line x1="7" y1="7" x2="17" y2="17"/>
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
               </svg>
             </button>
           </div>
@@ -1470,9 +1740,6 @@
       showSection('overview');
       await applyGlobalFilters();
     });
-
-
-
 
 
     // ─── Polling for real‑time status updates ───

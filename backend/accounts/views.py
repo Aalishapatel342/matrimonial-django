@@ -84,6 +84,10 @@ def register_view(request):
             "gender": cleaned["gender"],
             "dob": cleaned["dob"],
             "password": make_password(cleaned["password"]),
+            # Default: non-premium for new users.
+            # Premium status is checked via subscriptions.{"is_premium"},
+            # but we also store a tag here for convenience.
+            "premium_tag": "non_premium",
             "created_at": datetime.utcnow(),
         }
         result = users.insert_one(user_doc)
@@ -317,6 +321,24 @@ def dashboard_view(request):
 
     cities = sorted({p.get("city", "") for p in users.find(query, {"city": 1}) if p.get("city")})
 
+    filters_applied = any(
+        k in request.GET and str(request.GET.get(k, "")).strip()
+        for k in [
+            "religion",
+            "profession",
+            "city",
+            "education",
+            "mother_tongue",
+            "height",
+            "age_min",
+            "age_max",
+            "salary_min",
+            "salary_max",
+            "search",
+            "age",
+        ]
+    )
+
     return render(
         request,
         "dashboard.html",
@@ -329,8 +351,10 @@ def dashboard_view(request):
             "city": city,
             "cities": cities,
             "profile_completion_pct": profile_completion_pct,
+            "filters_applied": filters_applied,
         },
     )
+
 
 
 
@@ -465,6 +489,25 @@ def _get_request_user_object_id(request):
     if not user_id:
         return None
     return ObjectId(user_id)
+
+
+def subscription_status_view(request):
+    """Return whether the logged-in user has an active premium subscription."""
+    from django.http import JsonResponse
+
+    if request.method != "GET":
+        return JsonResponse({"is_premium": False})
+
+    user_oid = _get_request_user_object_id(request)
+    if not user_oid:
+        return JsonResponse({"is_premium": False})
+
+    users = get_users_collection()
+    db = users.database
+    subs = db.get_collection("subscriptions")
+
+    doc = subs.find_one({"user_id": user_oid}) or {}
+    return JsonResponse({"is_premium": bool(doc.get("is_premium"))})
 
 
 def notifications_view(request):
@@ -711,6 +754,14 @@ def pinned_view(request):
     for p in pinned_docs:
         partner_oid = p.get("partner_id")
         partner = users.find_one({"_id": partner_oid}) or {}
+
+        # Format profile_pic as a data URI (raw base64 in src= causes 404)
+        pic_raw = partner.get("profile_pic")
+        pic_ct = partner.get("profile_pic_content_type")
+        formatted_pic = None
+        if pic_raw and pic_ct:
+            formatted_pic = "data:" + pic_ct + ";base64," + pic_raw
+
         out.append(
             {
                 "id": str(partner_oid),
@@ -724,9 +775,8 @@ def pinned_view(request):
                 "mother_tongue": partner.get("mother_tongue", ""),
                 "bio": partner.get("bio", ""),
                 "verified": bool(partner.get("verified", False)),
-                "profile_pic_is_profile_pic": bool(partner.get("profile_pic_is_profile_pic", False)),
-                "profile_pic": partner.get("profile_pic"),
-                "profile_pic_content_type": partner.get("profile_pic_content_type"),
+                "profile_pic": formatted_pic,
+                "profile_pic_content_type": pic_ct,
                 "compatibility": partner.get("compatibility") or 70,
                 "profile_pic_is_profile_pic": bool(partner.get("profile_pic_is_profile_pic", False)),
             }
@@ -1119,7 +1169,39 @@ def block_toggle_view(request, profile_id):
 
 
 
+def disconnect_view(request, profile_id):
+    """Disconnect (remove pinned connection) between logged-in user and `profile_id`."""
+    from django.http import JsonResponse
+
+    if request.method != "POST":
+        return JsonResponse({"disconnected": False})
+
+    from_oid = _get_request_user_object_id(request)
+    if not from_oid:
+        return JsonResponse({"disconnected": False})
+
+    try:
+        other_oid = ObjectId(profile_id)
+    except Exception:
+        return JsonResponse({"disconnected": False})
+
+    users = get_users_collection()
+    db = users.database
+
+    pinned = db.get_collection("pinned")
+    # Remove connection both directions (idempotent)
+    pinned.delete_many({"user_id": from_oid, "partner_id": other_oid})
+    pinned.delete_many({"user_id": other_oid, "partner_id": from_oid})
+
+    chats = db.get_collection("conversations")
+    chats.delete_many({"user_id": from_oid, "partner_id": other_oid})
+    chats.delete_many({"user_id": other_oid, "partner_id": from_oid})
+
+    return JsonResponse({"disconnected": True})
+
+
 def blocked_list_view(request):
+
     """Return profiles that current user has blocked (mutual rows).
 
     Response: { profiles: [ {id, full_name, age, ...} ] }
@@ -1162,26 +1244,55 @@ def messages_send_view(request, partner_id):
     if request.method != "POST":
         return JsonResponse({"ok": False})
 
-    user_oid = _get_request_user_object_id(request)
-    if not user_oid:
+    sender_oid = _get_request_user_object_id(request)
+    if not sender_oid:
         return JsonResponse({"ok": False})
 
     try:
-        other_oid = ObjectId(partner_id)
+        receiver_oid = ObjectId(partner_id)
     except Exception:
         return JsonResponse({"ok": False})
 
     users = get_users_collection()
     db = users.database
-    if _is_blocked_mutual(db, user_oid, other_oid):
+
+    if _is_blocked_mutual(db, sender_oid, receiver_oid):
         return JsonResponse({"ok": False, "blocked": True})
 
+    # Premium gating: Premium users can message anyone.
+    # Non-premium users can message only connected/pinned users.
+    is_premium = False
+    try:
+        sub = db.get_collection("subscriptions").find_one({"user_id": sender_oid})
+        if sub and bool(sub.get("is_premium")):
+            # Optionally enforce expiry if present
+            exp = sub.get("expiry_date")
+            if exp:
+                try:
+                    if isinstance(exp, str):
+                        exp_dt = datetime.fromisoformat(exp)
+                    else:
+                        exp_dt = exp
+                    if datetime.utcnow() <= exp_dt:
+                        is_premium = True
+                except Exception:
+                    # If expiry parsing fails, treat as premium anyway (defensive)
+                    is_premium = True
+            else:
+                is_premium = True
+    except Exception:
+        is_premium = False
+
+    if not is_premium:
+        pinned = db.get_collection("pinned")
+        is_connected = bool(
+            pinned.find_one({"user_id": sender_oid, "partner_id": receiver_oid})
+            or pinned.find_one({"user_id": receiver_oid, "partner_id": sender_oid})
+        )
+        if not is_connected:
+            return JsonResponse({"ok": False, "premium_required": True})
 
     import json
-
-    user_oid = _get_request_user_object_id(request)
-    if not user_oid:
-        return JsonResponse({"ok": False})
 
     payload = {}
     try:
@@ -1193,16 +1304,12 @@ def messages_send_view(request, partner_id):
     if not text:
         return JsonResponse({"ok": False})
 
-    users = get_users_collection()
-    db = users.database
     messages_col = db.get_collection("messages")
-
-    partner_oid = ObjectId(partner_id)
 
     messages_col.insert_one(
         {
-            "sender_id": user_oid,
-            "receiver_id": partner_oid,
+            "sender_id": sender_oid,
+            "receiver_id": receiver_oid,
             "text": text,
             "created_at": datetime.utcnow(),
         }
@@ -1211,17 +1318,30 @@ def messages_send_view(request, partner_id):
     # Ensure conversation exists (both ways)
     conversations = db.get_collection("conversations")
     conversations.update_one(
-        {"user_id": user_oid, "partner_id": partner_oid},
-        {"$setOnInsert": {"user_id": user_oid, "partner_id": partner_oid, "created_at": datetime.utcnow()}},
+        {"user_id": sender_oid, "partner_id": receiver_oid},
+        {
+            "$setOnInsert": {
+                "user_id": sender_oid,
+                "partner_id": receiver_oid,
+                "created_at": datetime.utcnow(),
+            }
+        },
         upsert=True,
     )
     conversations.update_one(
-        {"user_id": partner_oid, "partner_id": user_oid},
-        {"$setOnInsert": {"user_id": partner_oid, "partner_id": user_oid, "created_at": datetime.utcnow()}},
+        {"user_id": receiver_oid, "partner_id": sender_oid},
+        {
+            "$setOnInsert": {
+                "user_id": receiver_oid,
+                "partner_id": sender_oid,
+                "created_at": datetime.utcnow(),
+            }
+        },
         upsert=True,
     )
 
     return JsonResponse({"ok": True})
+
 
 
 def api_profiles_filter_view(request):
@@ -1522,6 +1642,3 @@ def debug_session_view(request):
             "full_name": request.session.get("full_name"),
         }
     )
-
-
-

@@ -1,7 +1,6 @@
 from django.urls import path, include
 
 from . import views
-from .api_urls import urlpatterns as api_urlpatterns
 
 urlpatterns = [
     # Root should not be the login target; it causes redirect loops when session is missing.
@@ -16,8 +15,12 @@ urlpatterns = [
     path("settings/", views.settings_view, name="settings"),
     path("debug/session/", views.debug_session_view, name="debug_session"),
     path("edit-profile/", views.edit_profile_view, name="edit_profile"),
-    path("", views.edit_profile_view, name="edit_profile_root"),
-    path("", include(api_urlpatterns)),
+    path("edit-profile-root/", views.edit_profile_view, name="edit_profile_root"),
+]
+
+# API URL patterns are included separately to avoid URL pattern conflicts
+urlpatterns += [
+    path("", include("accounts.api_urls")),
 ]
 
 

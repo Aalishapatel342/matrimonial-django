@@ -9,6 +9,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Subscription status
+    path("subscription/status/", views.subscription_status_view, name="subscription_status"),
+
     # Notifications (received requests)
     path("notifications/", views.notifications_view, name="notifications"),
 
@@ -62,9 +65,10 @@ urlpatterns = [
     path("block/toggle/<str:profile_id>/", views.block_toggle_view, name="block_toggle"),
     path("blocked/", views.blocked_list_view, name="blocked_list"),
 
-
+    # Disconnect (remove pinned connection)
+    path(
+        "disconnect/<str:profile_id>/",
+        views.disconnect_view,
+        name="disconnect",
+    ),
 ]
-
-
-
-
